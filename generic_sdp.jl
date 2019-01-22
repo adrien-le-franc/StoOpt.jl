@@ -2,7 +2,7 @@
 #
 # functions for Stochastic Dynamic Programming 
 
-using ProgressMeter, Interpolations
+using ProgressMeter, Interpolations, StatsBase
 
 include("struct.jl")
 
@@ -138,8 +138,8 @@ function compute_mean_risk_value_functions(train_noises::Union{Noise, Array{Nois
 
 			state = collect(state)
 
-			value_w = []
-			proba_w = []
+			value_w = Float64[]
+			proba_w = Float64[]
 
 			#expectation = 0.
 
@@ -170,11 +170,11 @@ function compute_mean_risk_value_functions(train_noises::Union{Noise, Array{Nois
 
 				#expectation += v*p_noise
 
-				expectation = value_w'*proba_w
-				var_alpha = quantile(value_w, AnalyticWeights(proba_w), 1-alpha)
-				avar_alpha = var_alpha + max.(0, value_w .- var_alpha)'*proba_w / alpha
-
 			end
+
+			expectation = value_w'*proba_w
+			var_alpha = StatsBase.quantile(value_w, AnalyticWeights(proba_w), 1-alpha)
+			avar_alpha = var_alpha + max.(0, value_w .- var_alpha)'*proba_w / alpha
 
 			value_function[t][index...] = lambda*expectation + (1-lambda)*avar_alpha
 
