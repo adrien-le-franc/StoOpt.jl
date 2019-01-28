@@ -2,9 +2,9 @@
 #
 # functions for Stochastic Dynamic Programming 
 
-using ProgressMeter, Interpolations, StatsBase
+#using ProgressMeter, Interpolations, StatsBase
 
-include("struct.jl")
+#include("struct.jl")
 
 function admissible_state(x::Array{Float64}, states::Grid)
 	"""check if x is in states: return a boolean
@@ -49,7 +49,7 @@ function compute_value_functions(train_noises::Union{Noise, Array{Noise}},
 	state_iterator = run(states, enumerate=true)
 	control_iterator = run(controls)
 
-	value_function = [zeros(state_size...) for t in 1:T+1]
+	value_function = [zeros(state_size...) for t in 1:horizon+1]
 	expectation = 0.
 
 	@showprogress for t in horizon:-1:1
@@ -124,7 +124,7 @@ function compute_mean_risk_value_functions(train_noises::Union{Noise, Array{Nois
 	state_iterator = run(states, enumerate=true)
 	control_iterator = run(controls)
 
-	value_function = [zeros(state_size...) for t in 1:T+1]
+	value_function = [zeros(state_size...) for t in 1:horizon+1]
 	expectation = 0.
 
 	@showprogress for t in horizon:-1:1
@@ -261,7 +261,7 @@ function compute_online_trajectory(x0::Array{Float64}, test_noise::Array{Float64
     state_steps = grid_steps(states)
     control_iterator = run(controls)
     
-    for t in 1:1:T
+    for t in 1:1:horizon
         
         noise = test_noise[t, :]
         price = prices[t, :]

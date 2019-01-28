@@ -1,0 +1,10 @@
+name = "StoOpt"
+uuid = "b078af00-22e2-11e9-2e46-77c5cd6e0fea"
+authors = ["Adrien Le Franc"]
+version = "0.1.0"
+
+[deps]
+Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
+Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
+ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
+StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"

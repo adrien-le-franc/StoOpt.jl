@@ -2,7 +2,7 @@
 #
 # generic struct items for EMS problems 
 
-using Clustering
+#using Clustering
 
 ## Grid ##
 
@@ -25,6 +25,19 @@ end
 function Grid(states::Vararg{StepRangeLen{Float64,Base.TwicePrecision{Float64},Base.TwicePrecision{Float64}}})
 
 	Grid(collect(states))
+
+end
+
+function Grid(xmin::Array{Float64}, dx::Array{Float64}, xmax::Array{Float64})
+
+	if !(size(xmin) == size(dx) == size(xmax))
+			error("Grid: xmin $(size(xmin)) dx $(size(dx)) xmax $(size(xmax)) do not match")
+	end
+
+	dimension = length(xmin)
+	states = [xmin[i]:dx[i]:xmax[i] for i in 1:dimension]
+	
+	Grid(states)
 
 end
 
@@ -51,7 +64,7 @@ struct Noise
 	function Noise(w::Array{Float64, 2}, pw::Array{Float64, 2})
 
 		if size(w) != size(pw)
-			error("noise size $(size(w)) not equal to probabilities size $(size(pw))")
+			error("Noise: noise size $(size(w)) not equal to probabilities size $(size(pw))")
 		end
 		new(w, pw)
 
