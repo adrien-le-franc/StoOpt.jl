@@ -2,9 +2,6 @@
 #
 # functions for Stochastic Dynamic Programming 
 
-#using ProgressMeter, Interpolations, StatsBase
-
-#include("struct.jl")
 
 function admissible_state(x::Array{Float64}, states::Grid)
 	"""check if x is in states: return a boolean
@@ -49,26 +46,28 @@ function compute_value_functions(train_noises::Union{Noise, Array{Noise}},
 	state_iterator = run(states, enumerate=true)
 	control_iterator = run(controls)
 
-	value_function = [zeros(state_size...) for t in 1:horizon+1]
-	expectation = 0.
+	value_functions = Dict(t => zeros(state_size...) for t in 1:horizon+1)
 
 	@showprogress for t in horizon:-1:1
 
+		value_function = value_functions[t]
+
 		price = prices[t, :]
 		noise_iterator = run(train_noises, t)
-
-		interpolator = interpolate(value_function[t+1], BSpline(Linear()))
+		interpolator = interpolate(value_functions[t+1], BSpline(Linear()))
 		
 		for (state, index) in state_iterator
 
 			state = collect(state)
-			expectation = 0.
+	
+			value_w = Float64[]
+			proba_w = Float64[]
 
 			for (noise, probability) in noise_iterator
 
 				noise = collect(noise)
 				p_noise = prod(probability)
-				v = 10e8
+				v = Inf
 
 				for control in control_iterator
 
@@ -86,17 +85,22 @@ function compute_value_functions(train_noises::Union{Noise, Array{Noise}},
 
 				end
 
-				expectation += v*p_noise
+				push!(value_w, v)
+				push!(proba_w, p_noise)
 
 			end
 
-			value_function[t][index...] = expectation
+			expectation = value_w'*proba_w
+
+			value_function[index...] = expectation
 
 		end
 
+		value_functions[t] = value_function
+
 	end
 
-	return value_function
+	return value_functions
 
 end
 
@@ -124,15 +128,15 @@ function compute_mean_risk_value_functions(train_noises::Union{Noise, Array{Nois
 	state_iterator = run(states, enumerate=true)
 	control_iterator = run(controls)
 
-	value_function = [zeros(state_size...) for t in 1:horizon+1]
-	expectation = 0.
+	value_functions = Dict(t => zeros(state_size...) for t in 1:horizon+1)
 
 	@showprogress for t in horizon:-1:1
 
 		price = prices[t, :]
 		noise_iterator = run(train_noises, t)
+		interpolator = interpolate(value_functions[t+1], BSpline(Linear()))
 
-		interpolator = interpolate(value_function[t+1], BSpline(Linear()))
+		value_function = value_functions[t]
 		
 		for (state, index) in state_iterator
 
@@ -141,13 +145,11 @@ function compute_mean_risk_value_functions(train_noises::Union{Noise, Array{Nois
 			value_w = Float64[]
 			proba_w = Float64[]
 
-			#expectation = 0.
-
 			for (noise, probability) in noise_iterator
 
 				noise = collect(noise)
 				p_noise = prod(probability)
-				v = 10e8
+				v = Inf
 
 				for control in control_iterator
 
@@ -163,12 +165,10 @@ function compute_mean_risk_value_functions(train_noises::Union{Noise, Array{Nois
 
 					v = min(v, cost(price, state, control, noise) + next_value_function)
 
-					push!(value_w, v)
-					push!(proba_w, p_noise)
-
 				end
 
-				#expectation += v*p_noise
+				push!(value_w, v)
+				push!(proba_w, p_noise)
 
 			end
 
@@ -176,13 +176,15 @@ function compute_mean_risk_value_functions(train_noises::Union{Noise, Array{Nois
 			var_alpha = StatsBase.quantile(value_w, AnalyticWeights(proba_w), 1-alpha)
 			avar_alpha = var_alpha + max.(0, value_w .- var_alpha)'*proba_w / alpha
 
-			value_function[t][index...] = lambda*expectation + (1-lambda)*avar_alpha
+			value_function[index...] = lambda*expectation + (1-lambda)*avar_alpha
 
 		end
 
+		value_functions[t] = value_function
+
 	end
 
-	return value_function
+	return value_functions
 
 end
 
@@ -205,7 +207,7 @@ function compute_online_policy(x::Array{Float64}, w::Array{Float64}, price::Arra
 
 	"""
 
-	vopt = 10e8
+	vopt = Inf
     uopt = 0
         
     for control in control_iterator
@@ -236,9 +238,9 @@ function compute_online_policy(x::Array{Float64}, w::Array{Float64}, price::Arra
 end
 
 function compute_online_trajectory(x0::Array{Float64}, test_noise::Array{Float64}, 
-	value_function::Array{Any}, controls::Grid, states::Grid, 
+	value_function::Dict{Int64, T}, controls::Grid, states::Grid, 
 	dynamics::Function, cost::Function, prices::Array{Float64},
-	horizon::Int64; order::Int64=1)
+	horizon::Int64; order::Int64=1) where T <: Array{Float64}
 
 	"""compute online trajectory: return 
 
