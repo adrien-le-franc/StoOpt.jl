@@ -46,14 +46,14 @@ function compute_value_functions(train_noises::Union{Noise, Array{Noise}},
 	state_iterator = run(states, enumerate=true)
 	control_iterator = run(controls)
 
-	value_functions = Dict(t => zeros(state_size...) for t in 1:horizon+1)
+	value_functions = Dict(t => zeros(state_size...) for t in 1:horizon)
 
-	@showprogress for t in horizon:-1:1
+	@showprogress for t in horizon-1:-1:1
 
 		value_function = value_functions[t]
 
-		price = prices[t, :]
-		noise_iterator = run(train_noises, t)
+		price = prices[t+1, :]
+		noise_iterator = run(train_noises, t+1)
 		interpolator = interpolate(value_functions[t+1], BSpline(Linear()))
 		
 		for (state, index) in state_iterator
@@ -130,13 +130,13 @@ function compute_mean_risk_value_functions(train_noises::Union{Noise, Array{Nois
 
 	value_functions = Dict(t => zeros(state_size...) for t in 1:horizon+1)
 
-	@showprogress for t in horizon:-1:1
-
-		price = prices[t, :]
-		noise_iterator = run(train_noises, t)
-		interpolator = interpolate(value_functions[t+1], BSpline(Linear()))
+	@showprogress for t in horizon-1:-1:1
 
 		value_function = value_functions[t]
+
+		price = prices[t+1, :]
+		noise_iterator = run(train_noises, t+1)
+		interpolator = interpolate(value_functions[t+1], BSpline(Linear()))
 		
 		for (state, index) in state_iterator
 
@@ -257,7 +257,7 @@ function compute_online_trajectory(x0::Array{Float64}, test_noise::Array{Float64
 	"""
    
     online_stock = [x0]
-    online_cost = [0.]
+    online_cost = Float64[]
     state = x0
 
     state_steps = grid_steps(states)
@@ -267,7 +267,7 @@ function compute_online_trajectory(x0::Array{Float64}, test_noise::Array{Float64
         
         noise = test_noise[t, :]
         price = prices[t, :]
-        interpolator = interpolate(value_function[t+1], BSpline(Linear()))
+        interpolator = interpolate(value_function[t], BSpline(Linear()))
 
         uopt = compute_online_policy(state, noise, price, states, control_iterator, interpolator,
         	dynamics, cost, state_steps)
