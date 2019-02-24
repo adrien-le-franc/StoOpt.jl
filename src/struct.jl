@@ -28,14 +28,20 @@ function Grid(states::Vararg{StepRangeLen{Float64,Base.TwicePrecision{Float64},B
 
 end
 
-function Grid(xmin::Array{Float64}, dx::Array{Float64}, xmax::Array{Float64})
+function Grid(xmin::Union{Float64, Array{Float64}}, dx::Union{Float64, Array{Float64}}, 
+	xmax::Union{Float64, Array{Float64}})
 
 	if !(size(xmin) == size(dx) == size(xmax))
 			error("Grid: xmin $(size(xmin)) dx $(size(dx)) xmax $(size(xmax)) do not match")
 	end
 
 	dimension = length(xmin)
-	states = [xmin[i]:dx[i]:xmax[i] for i in 1:dimension]
+
+	if dimension == 1
+		states = [xmin:dx:xmax]
+	else
+		states = [xmin[i]:dx[i]:xmax[i] for i in 1:dimension]
+	end
 	
 	Grid(states)
 

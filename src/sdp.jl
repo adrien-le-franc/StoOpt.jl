@@ -190,8 +190,7 @@ end
 
 function compute_online_policy(x::Array{Float64}, w::Array{Float64}, price::Array{Float64}, states::Grid,
 	control_iterator, #::Base.Iterators.ProductIterator{Tuple{Vararg{StepRangeLen{Float64,Base.TwicePrecision{Float64},Base.TwicePrecision{Float64}}}}},
-	interpolator, #::Interpolations.BSplineInterpolation{Float64,1,Array{Float64,1},BSpline{Linear},Tuple{Base.OneTo{Int64}}},
-	dynamics::Function, cost::Function, state_steps::Array{Float64})
+	value_function::Array{Float64}, dynamics::Function, cost::Function, state_steps::Array{Float64})
 
 	"""compute online policy: return optimal control at state x observing w
 
@@ -207,6 +206,7 @@ function compute_online_policy(x::Array{Float64}, w::Array{Float64}, price::Arra
 
 	"""
 
+	interpolator = interpolate(value_function, BSpline(Linear()))
 	vopt = Inf
     uopt = 0
         
@@ -238,7 +238,7 @@ function compute_online_policy(x::Array{Float64}, w::Array{Float64}, price::Arra
 end
 
 function compute_online_trajectory(x0::Array{Float64}, test_noise::Array{Float64}, 
-	value_function::Dict{Int64, T}, controls::Grid, states::Grid, 
+	value_functions::Dict{Int64, T}, controls::Grid, states::Grid, 
 	dynamics::Function, cost::Function, prices::Array{Float64},
 	horizon::Int64; order::Int64=1) where T <: Array{Float64}
 
@@ -267,9 +267,9 @@ function compute_online_trajectory(x0::Array{Float64}, test_noise::Array{Float64
         
         noise = test_noise[t, :]
         price = prices[t, :]
-        interpolator = interpolate(value_function[t], BSpline(Linear()))
+        value_function = value_functions[t]
 
-        uopt = compute_online_policy(state, noise, price, states, control_iterator, interpolator,
+        uopt = compute_online_policy(state, noise, price, states, control_iterator, value_function,
         	dynamics, cost, state_steps)
         
         push!(online_cost, cost(price, state, uopt, noise))
