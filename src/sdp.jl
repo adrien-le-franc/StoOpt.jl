@@ -237,10 +237,10 @@ function compute_online_policy(x::Array{Float64}, w::Array{Float64}, price::Arra
 
 end
 
-function compute_online_trajectory(x0::Array{Float64}, test_noise::Array{Float64}, 
-	value_functions::Dict{Int64, T}, controls::Grid, states::Grid, 
-	dynamics::Function, cost::Function, prices::Array{Float64},
-	horizon::Int64; order::Int64=1) where T <: Array{Float64}
+function compute_online_trajectory(x0::Union{Float64, Array{Float64}}, test_noise::Array{Float64},
+	value_functions::Dict{Int64, T}, controls::Grid, states::Grid, dynamics::Function,
+	cost::Function, prices::Array{Float64}, horizon::Int64;
+	order::Int64=1) where T <: Array{Float64}
 
 	"""compute online trajectory: return 
 
@@ -255,9 +255,11 @@ function compute_online_trajectory(x0::Array{Float64}, test_noise::Array{Float64
 	order > interpolation order
 
 	"""
-   
-    online_stock = [x0]
-    online_cost = Float64[]
+
+	dimension = length(x0)
+    online_stock = zeros(horizon+1, dimension)
+    online_cost = zeros(horizon, 1)
+    online_stock[1, :] = x0
     state = x0
 
     state_steps = grid_steps(states)
@@ -272,9 +274,9 @@ function compute_online_trajectory(x0::Array{Float64}, test_noise::Array{Float64
         uopt = compute_online_policy(state, noise, price, states, control_iterator, value_function,
         	dynamics, cost, state_steps)
         
-        push!(online_cost, cost(price, state, uopt, noise))
+        online_cost[t] = cost(price, state, uopt, noise)
         state = dynamics(state, uopt, noise)
-        push!(online_stock, state)
+        online_stock[t+1, :] = state
         
     end
     

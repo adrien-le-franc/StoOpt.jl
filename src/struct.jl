@@ -2,7 +2,6 @@
 #
 # generic struct items for EMS problems 
 
-#using Clustering
 
 ## Grid ##
 
@@ -23,9 +22,7 @@ function grid_steps(g::Grid)
 end
 
 function Grid(states::Vararg{StepRangeLen{Float64,Base.TwicePrecision{Float64},Base.TwicePrecision{Float64}}})
-
 	Grid(collect(states))
-
 end
 
 function Grid(xmin::Union{Float64, Array{Float64}}, dx::Union{Float64, Array{Float64}}, 
@@ -49,7 +46,6 @@ end
 
 function run(input::Grid; enumerate=false)
 
-
 	if !enumerate
 		return Iterators.product(input.states...)
 	else
@@ -61,6 +57,7 @@ function run(input::Grid; enumerate=false)
 end
 
 ## Noise ## 
+
 struct Noise
 	"""discretized noise space with probabilities"""
 
@@ -77,12 +74,6 @@ struct Noise
 	end
 
 end
-
-#function Noise(w::Array{Float64, 2}, pw::Array{Float64, 2}) 
-#
-#	Noise(w, pw)
-#
-#end
 
 function Noise(data::Array{Float64, 2}, k::Int64) 
 
@@ -130,3 +121,28 @@ function run(input::Union{Noise, Array{Noise}}, i::Int64)
 	end
 
 end
+
+### Prices
+
+struct Price
+	"""purchase and sale prices"""
+	buy::Array{Float64, 1}
+	sell::Array{Float64, 1}
+
+	function Price(buy::Array{Float64, 1}, sell::Array{Float64, 1})
+
+		if size(buy) != size(sell)
+			error("Price: buy size $(size(buy)) not equal to sell size $(size(sell))")
+		end
+		new(buy, sell)
+
+	end
+
+end
+
+function Price(buy::Array{Float64, 1})
+	Price(buy, zeros(size(buy)))
+end
+
+Base.length(p::Price) = length(p.buy)
+Base.getindex(p::Price, i::Int) = [p.buy[i], p.sell[i]]
