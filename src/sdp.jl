@@ -27,7 +27,7 @@ end
 
 function compute_value_functions(train_noises::Union{Noise, Array{Noise}}, 
 	controls::Grid, states::Grid, dynamics::Function, cost::Function, 
-	prices::Array{Float64}, horizon::Int64; order::Int64=1)
+	prices::Price, horizon::Int64; order::Int64=1)
 
 	"""compute value functions: return Dict(1=>Array ... horizon=>Array)
 
@@ -52,7 +52,7 @@ function compute_value_functions(train_noises::Union{Noise, Array{Noise}},
 
 		value_function = value_functions[t]
 
-		price = prices[t+1, :]
+		price = prices[t+1]
 		noise_iterator = run(train_noises, t+1)
 		interpolator = interpolate(value_functions[t+1], BSpline(Linear()))
 		
@@ -106,7 +106,7 @@ end
 
 function compute_mean_risk_value_functions(train_noises::Union{Noise, Array{Noise}}, 
 	controls::Grid, states::Grid, dynamics::Function, cost::Function, 
-	prices::Array{Float64}, horizon::Int64, lambda::Float64, alpha::Float64,
+	prices::Price, horizon::Int64, lambda::Float64, alpha::Float64,
 	; order::Int64=1)
 
 	"""compute value functions: return Dict(1=>Array ... horizon=>Array)
@@ -134,7 +134,7 @@ function compute_mean_risk_value_functions(train_noises::Union{Noise, Array{Nois
 
 		value_function = value_functions[t]
 
-		price = prices[t+1, :]
+		price = prices[t+1]
 		noise_iterator = run(train_noises, t+1)
 		interpolator = interpolate(value_functions[t+1], BSpline(Linear()))
 		
@@ -239,8 +239,7 @@ end
 
 function compute_online_trajectory(x0::Union{Float64, Array{Float64}}, test_noise::Array{Float64},
 	value_functions::Dict{Int64, T}, controls::Grid, states::Grid, dynamics::Function,
-	cost::Function, prices::Array{Float64}, horizon::Int64;
-	order::Int64=1) where T <: Array{Float64}
+	cost::Function, prices::Price, horizon::Int64; order::Int64=1) where T <: Array{Float64}
 
 	"""compute online trajectory: return 
 
@@ -268,7 +267,7 @@ function compute_online_trajectory(x0::Union{Float64, Array{Float64}}, test_nois
     for t in 1:1:horizon
         
         noise = test_noise[t, :]
-        price = prices[t, :]
+        price = prices[t]
         value_function = value_functions[t]
 
         uopt = compute_online_policy(state, noise, price, states, control_iterator, value_function,

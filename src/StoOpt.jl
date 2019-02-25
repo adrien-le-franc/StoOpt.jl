@@ -10,4 +10,8 @@ export compute_mean_risk_value_functions
 export compute_online_policy
 export compute_online_trajectory
 
+export Grid
+export Noise
+export Price
+
 end # module

@@ -144,5 +144,9 @@ function Price(buy::Array{Float64, 1})
 	Price(buy, zeros(size(buy)))
 end
 
+function Price()
+	Price([0.])
+end
+
 Base.length(p::Price) = length(p.buy)
 Base.getindex(p::Price, i::Int) = [p.buy[i], p.sell[i]]
