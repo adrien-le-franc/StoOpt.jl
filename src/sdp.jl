@@ -72,7 +72,7 @@ function compute_value_functions(train_noises::Union{Noise, Array{Noise}},
 				for control in control_iterator
 
 					control = collect(control)
-					next_state = dynamics(state, control, noise)
+					next_state = dynamics(t, state, control, noise)
 
 					if !admissible_state(next_state, states)
 						continue
@@ -81,7 +81,7 @@ function compute_value_functions(train_noises::Union{Noise, Array{Noise}},
 					where = next_state ./ state_steps .+ 1.
 					next_value_function = interpolator(where...)
 
-					v = min(v, cost(price, state, control, noise) + next_value_function)
+					v = min(v, cost(t, price, state, control, noise) + next_value_function)
 
 				end
 
@@ -188,9 +188,9 @@ function compute_mean_risk_value_functions(train_noises::Union{Noise, Array{Nois
 
 end
 
-function compute_online_policy(x::Array{Float64}, w::Array{Float64}, price::Array{Float64}, states::Grid,
-	control_iterator, #::Base.Iterators.ProductIterator{Tuple{Vararg{StepRangeLen{Float64,Base.TwicePrecision{Float64},Base.TwicePrecision{Float64}}}}},
-	value_function::Array{Float64}, dynamics::Function, cost::Function, state_steps::Array{Float64})
+function compute_online_policy(t::Int64, x::Array{Float64}, w::Noise, price::Array{Float64},
+	states::Grid, control_iterator, value_function::Array{Float64}, dynamics::Function, 
+	cost::Function, state_steps::Array{Float64})
 
 	"""compute online policy: return optimal control at state x observing w
 
@@ -207,26 +207,48 @@ function compute_online_policy(x::Array{Float64}, w::Array{Float64}, price::Arra
 	"""
 
 	interpolator = interpolate(value_function, BSpline(Linear()))
+	noise_iterator = run(w, 1)
 	vopt = Inf
-    uopt = 0
+    uopt = 0.
         
     for control in control_iterator
         
         control = collect(control)
-		next_state = dynamics(x, control, w)
+        value_w = Float64[]
+		proba_w = Float64[]
+		pass = false
 
-		if !admissible_state(next_state, states)
+        for (noise, probability) in noise_iterator
+
+			noise = collect(noise)
+			p_noise = prod(probability)
+
+			next_state = dynamics(t, x, control, noise)
+
+			if !admissible_state(next_state, states)
+				pass = true
+				break
+			end
+
+			where = next_state ./ state_steps .+ 1.
+			next_value_function = interpolator(where...)
+
+			v = cost(t, price, x, control, noise) + next_value_function
+
+			push!(value_w, v)
+			push!(proba_w, p_noise)
+
+		end
+
+		if pass
 			continue
 		end
 
-		where = next_state ./ state_steps .+ 1.
-		next_value_function = interpolator(where...)
+		expectation = value_w'*proba_w
 
-		v = cost(price, x, control, w) + next_value_function
+        if expectation < vopt
 
-        if v < vopt
-
-            vopt = v
+            vopt = expectation
             uopt = control
         
         end
