@@ -1,12 +1,14 @@
 module StoOpt
 
-using ProgressMeter, Interpolations, StatsBase, Clustering
+using ProgressMeter
+using Interpolations, StatsBase, Clustering
+using EllipsisNotation
 
 include("struct.jl")
 include("models.jl")
 include("sdp.jl")
 
-export Grid, Noise, Price
+export ValueFunctions, Grid, Noise, Price
 
 export AbstractModel, DynamicProgrammingModel
 export SDP

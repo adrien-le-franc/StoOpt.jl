@@ -3,6 +3,12 @@
 # generic struct for EMS problems 
 
 
+struct ValueFunctions
+	functions::Array{Float64}
+end
+
+Base.getindex(vf::ValueFunctions, t::Int64) = vf.functions[t, ..]
+
 
 ## Grid ##
 
