@@ -7,6 +7,8 @@ include("models.jl")
 include("sdp.jl")
 
 export Grid, Noise, Price
+
+export AbstractModel, DynamicProgrammingModel
 export SDP
 
 export compute_value_functions

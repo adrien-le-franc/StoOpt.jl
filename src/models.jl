@@ -12,7 +12,7 @@ struct SDP <: DynamicProgrammingModel
 end
 
 
-struct SDP <: DynamicProgrammingModel
+struct SDDP <: DynamicProgrammingModel
 
 end
 
