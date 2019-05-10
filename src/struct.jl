@@ -1,6 +1,7 @@
 # developed with Julia 1.0.3
 #
-# generic struct items for EMS problems 
+# generic struct for EMS problems 
+
 
 
 ## Grid ##
