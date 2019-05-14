@@ -3,7 +3,7 @@
 # generic struct for EMS problems 
 
 
-struct Valuefunctions
+struct ValueFunctions
 	functions::Array{Float64}
 end
 
