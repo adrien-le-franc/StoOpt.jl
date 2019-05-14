@@ -7,6 +7,9 @@ abstract type AbstractModel end
 abstract type DynamicProgrammingModel <: AbstractModel end
 
 
+struct DummyModel <: AbstractModel end
+
+
 struct SDP <: DynamicProgrammingModel
 
 end

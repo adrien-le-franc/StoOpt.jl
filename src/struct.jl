@@ -8,6 +8,8 @@ struct ValueFunctions
 end
 
 Base.getindex(vf::ValueFunctions, t::Int64) = vf.functions[t, ..]
+Base.:(==)(vf1::ValueFunctions, vf2::ValueFunctions) = (vf1.functions == vf2.functions)
+ValueFunctions() = ValueFunctions(Float64[])
 
 
 ## Grid ##
