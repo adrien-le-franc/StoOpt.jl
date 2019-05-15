@@ -11,6 +11,7 @@ include("sdp.jl")
 export ValueFunctions, Grid, Noise, Price
 
 export AbstractModel, DynamicProgrammingModel
+export DummyModel
 export SDP, SDDP, MPC
 
 export compute_value_functions
