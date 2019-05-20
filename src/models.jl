@@ -12,6 +12,18 @@ struct DummyModel <: AbstractModel end
 
 struct SDP <: DynamicProgrammingModel
 
+	states::Grid
+	controls::Grid
+	noises::Noise
+	cost_parameters::Dict{String,Any}
+	dynamics_parameters::Dict{String,Any}
+	horizon::Int64
+
+end
+
+
+struct SDPaR <: SDP
+
 end
 
 

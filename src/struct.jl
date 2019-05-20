@@ -1,21 +1,20 @@
 # developed with Julia 1.0.3
 #
-# generic struct for EMS problems 
+# generic struct for Stochastic Optimization problems 
 
 
-struct ValueFunctions
+abstract type ValueFunctions end
+
+struct ArrayValueFunctions
 	functions::Array{Float64}
 end
 
-Base.getindex(vf::ValueFunctions, t::Int64) = vf.functions[t, ..]
-Base.:(==)(vf1::ValueFunctions, vf2::ValueFunctions) = (vf1.functions == vf2.functions)
-ValueFunctions() = ValueFunctions(Float64[])
+Base.getindex(vf::ArrayValueFunctions, t::Int64) = vf.functions[t, ..]
+Base.:(==)(vf1::ArrayValueFunctions, vf2::ArrayValueFunctions) = (vf1.functions == vf2.functions)
+ValueFunctions() = ArrayValueFunctions(Float64[])
 
-
-## Grid ##
 
 struct Grid
-	"""discretized space grid"""
 	states::Array{StepRangeLen{Float64,Base.TwicePrecision{Float64},Base.TwicePrecision{Float64}}, 1}
 end
 
@@ -27,7 +26,6 @@ function grid_steps(g::Grid)
 	"""grid steps, assuming a regular space grid: return type Tuple"""
 	dimension = length(size(g))
 	grid_steps = [g.states[i][2] - g.states[i][1] for i in 1:dimension]
-	#Tuple(grid_steps)
 end
 
 function Grid(states::Vararg{StepRangeLen{Float64,Base.TwicePrecision{Float64},Base.TwicePrecision{Float64}}})
@@ -65,7 +63,22 @@ function run(input::Grid; enumerate=false)
 
 end
 
-## Noise ## 
+
+struct Container
+	value::Array{Float64}
+end
+
+Base.getindex(container::Container, t::Int64) = container.value[t, ..]
+Base.:(==)(c1::Container, c2::Container) = (c1.value == c2.value)
+Container() = Container(Float64[])
+# iterator ??
+
+
+struct NNoise
+	w::Container
+	pw::Container
+end
+
 
 struct Noise
 	"""discretized noise space with probabilities"""
@@ -83,6 +96,7 @@ struct Noise
 	end
 
 end
+
 
 function Noise(data::Array{Float64, 2}, k::Int64) 
 
@@ -131,7 +145,12 @@ function run(input::Union{Noise, Array{Noise}}, i::Int64)
 
 end
 
-### Prices
+
+
+
+
+
+
 
 struct Price
 	"""purchase and sale prices"""
