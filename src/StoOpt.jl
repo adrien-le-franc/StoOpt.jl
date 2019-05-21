@@ -8,7 +8,8 @@ include("struct.jl")
 include("models.jl")
 include("sdp.jl")
 
-export ValueFunctions, Grid, Noise, Price
+export ValueFunctions, ArrayValueFunctions
+export Grid, Container, NNoise, Noise, Price
 
 export AbstractModel, DynamicProgrammingModel
 export DummyModel

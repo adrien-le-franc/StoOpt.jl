@@ -1,83 +1,161 @@
-# developed with Julia 1.0.3
+# developed with Julia 1.1.1
 #
 # generic struct for Stochastic Optimization problems 
 
 
+# Types for value functions
+
+
 abstract type ValueFunctions end
 
-struct ArrayValueFunctions
+
+struct ArrayValueFunctions <: ValueFunctions
 	functions::Array{Float64}
 end
 
 Base.getindex(vf::ArrayValueFunctions, t::Int64) = vf.functions[t, ..]
 Base.:(==)(vf1::ArrayValueFunctions, vf2::ArrayValueFunctions) = (vf1.functions == vf2.functions)
-ValueFunctions() = ArrayValueFunctions(Float64[])
+ArrayValueFunctions(t::Tuple{Vararg{Int64}}) = ArrayValueFunctions(zeros(t))
 
 
-struct Grid
-	states::Array{StepRangeLen{Float64,Base.TwicePrecision{Float64},Base.TwicePrecision{Float64}}, 1}
+# Type for discretized spaces 
+
+
+struct Grid{T <: StepRangeLen{Float64}}
+	states::Array{T}
 end
 
-Base.size(g::Grid) = Tuple([length(g.states[i]) for i in 1:length(g.states)])
-Base.length(g::Grid) = length(size(g))
 Base.getindex(g::Grid, i::Int) = g.states[i]
+Base.size(g::Grid) = Tuple([length(g[i]) for i in 1:length(g.states)])
 
-function grid_steps(g::Grid)
-	"""grid steps, assuming a regular space grid: return type Tuple"""
-	dimension = length(size(g))
-	grid_steps = [g.states[i][2] - g.states[i][1] for i in 1:dimension]
-end
-
-function Grid(states::Vararg{StepRangeLen{Float64,Base.TwicePrecision{Float64},Base.TwicePrecision{Float64}}})
+function Grid(states::Vararg{T}) where T <: StepRangeLen{Float64}
 	Grid(collect(states))
 end
 
-function Grid(xmin::Union{Float64, Array{Float64}}, dx::Union{Float64, Array{Float64}}, 
-	xmax::Union{Float64, Array{Float64}})
-
-	if !(size(xmin) == size(dx) == size(xmax))
-			error("Grid: xmin $(size(xmin)) dx $(size(dx)) xmax $(size(xmax)) do not match")
-	end
-
-	dimension = length(xmin)
-
-	if dimension == 1
-		states = [xmin:dx:xmax]
-	else
-		states = [xmin[i]:dx[i]:xmax[i] for i in 1:dimension]
-	end
-	
-	Grid(states)
-
-end
-
-function run(input::Grid; enumerate=false)
+function run(g::Grid{T}; enumerate=false) where T <: StepRangeLen{Float64}
 
 	if !enumerate
-		return Iterators.product(input.states...)
+		return Iterators.product(g.states...)
 	else
-		grid_size = size(input)
+		grid_size = size(g)
 		indices = Iterators.product([1:i for i in grid_size]...)
-		return zip(Iterators.product(input.states...), indices)
+		return zip(Iterators.product(g.states...), indices)
 	end
 
 end
 
+#function grid_steps(g::Grid)
+#	"""grid steps, assuming a regular space grid: return type Tuple"""
+#	dimension = length(size(g))
+#	grid_steps = [g.states[i][2] - g.states[i][1] for i in 1:dimension]
+#end
 
-struct Container
-	value::Array{Float64}
+
+# Types for handling noise processes 
+
+
+struct TimeProcess
+	data::Array{Float64,3}
+	horizon::Int64
+	cardinal::Int64
+	dimension::Int64
+
+	function TimeProcess(x::Array{Float64,3})
+		horizon, cardinal, dimension = size(x)
+		new(x, horizon, cardinal, dimension)
+	end
 end
 
-Base.getindex(container::Container, t::Int64) = container.value[t, ..]
-Base.:(==)(c1::Container, c2::Container) = (c1.value == c2.value)
-Container() = Container(Float64[])
-# iterator ??
+Base.size(tp::TimeProcess) = (tp.horizon, tp.cardinal, tp.dimension)
+Base.getindex(tp::TimeProcess, t::Int64) = tp.data[t, :, :]
+run(tp::TimeProcess, t::Int64) = eachrow(tp[t])
+
+function TimeProcess(x::Array{Float64,2})
+	horizon, cardinal = size(x)
+	x = reshape(x, horizon, cardinal, 1)
+	TimeProcess(x)
+end
+
+
+struct Probability
+	data::Array{Float64,2}
+	horizon::Int64
+	cardinal::Int64
+
+	function Probability(x::Array{Float64,2})
+		horizon, cardinal = size(x)
+		new(x, horizon, cardinal)
+	end
+end
+
+Base.size(p::Probability) = (p.horizon, p.cardinal)
+Base.getindex(p::Probability, t::Int64) = p.data[t, :]
+run(p::Probability, t::Int64) = Iterators.Stateful(p[t])
 
 
 struct NNoise
-	w::Container
-	pw::Container
+	w::TimeProcess
+	pw::Probability
+
+	function NNoise(w::TimeProcess, pw::Probability)
+		h_w, c_w, _ = size(w)
+		h_pw, c_pw = size(pw)
+		if (h_w, c_w) != (h_pw, c_pw)
+			error("Noise: noise size $(size(w)) not compatible with probabilities size $(size(pw))")
+		end
+		new(w, pw)
+	end
 end
+
+run(n::NNoise, t::Int64) = zip(run(n.w, t), run(n.pw, t))
+NNoise(w::Array{Float64}, pw::Array{Float64}) = NNoise(TimeProcess(w), Probability(pw))
+
+function NNoise(data::Array{Float64,2}, k::Int64) 
+
+	"""dicretize noise space to k values using Kmeans: return type Noise
+	data > time series data of dimension (horizon, n_data)
+	k > Kmeans parameter
+
+	"""
+
+	horizon, n_data = size(data)
+	w = zeros(horizon, k)
+	pw = zeros(horizon, k)
+
+	for t in 1:horizon
+		w_t = reshape(data[t, :], (1, :))
+		kmeans_w = kmeans(w_t, k)
+		w[t, :] = kmeans_w.centers
+		pw[t, :] = kmeans_w.cweights / n_data
+	end
+
+	return NNoise(w, pw)
+
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 struct Noise

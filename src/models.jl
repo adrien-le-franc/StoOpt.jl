@@ -14,7 +14,7 @@ struct SDP <: DynamicProgrammingModel
 
 	states::Grid
 	controls::Grid
-	noises::Noise
+	noises::NNoise
 	cost_parameters::Dict{String,Any}
 	dynamics_parameters::Dict{String,Any}
 	horizon::Int64
@@ -22,10 +22,9 @@ struct SDP <: DynamicProgrammingModel
 end
 
 
-struct SDPaR <: SDP
-
-end
-
+#struct SDPaR <: SDP
+#end
+# Q: type for "stagewise dependence" models ?
 
 struct SDDP <: DynamicProgrammingModel
 
