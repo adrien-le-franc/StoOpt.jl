@@ -142,11 +142,8 @@ end
 
 function eval_interpolation(x::Array{Float64,1}, i::Interpolation)
 
-	println("x: $(x)")
-	println(x ./ i.grid_steps .+ 1.)
-
 	grid_position = x ./ i.grid_steps .+ 1.
-	return i.interpolator(x...)
+	return i.interpolator(grid_position...)
 end
 
 

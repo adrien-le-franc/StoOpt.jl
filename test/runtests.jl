@@ -3,13 +3,14 @@
 # tests for StoOpt package
 
 using StoOpt, JLD, Test
+using Interpolations
 
 current_directory = @__DIR__
 
 
 @testset "StoOpt" begin
 
-    @testset "struct" begin
+    @testset "struct" begin 
         
         function test_grid_iterator()
         	g = Grid(1:3.0, 10:12.0, enumerate=true)
@@ -90,6 +91,31 @@ current_directory = @__DIR__
     @testset "SDP" begin
             
             sdp = SDP(states, controls, noises, cost_parameters, dynamics_parameters, horizon)
+
+            state_steps = StoOpt.steps(states)
+            interpolation = StoOpt.Interpolation(interpolate(zeros(11), BSpline(Linear())),
+            state_steps)
+            variables = StoOpt.Variables(horizon-1, [0.0], nothing, [1.0])
+
+            @test StoOpt.compute_optimal_realization(sdp, cost, dynamics, variables, 
+                interpolation) == 0.1
+
+            @test isapprox(StoOpt.compute_cost_to_go(sdp, cost, dynamics, variables, interpolation),
+                0.048178640538937376)
+
+            value_functions = StoOpt.ArrayValueFunctions((sdp.horizon, size(sdp.states)...))
+
+            StoOpt.fill_value_function!(sdp, cost, dynamics, variables, value_functions,
+                interpolation)
+
+
+
+            println(value_functions)
+
+           
+            """
+
+
             value_functions = compute_value_functions(sdp, cost, dynamics)
 
             @test value_functions[horizon] == zeros(size(states))
@@ -99,6 +125,7 @@ current_directory = @__DIR__
 
             @test all(value_functions[1] .> value_functions[horizon])
 
+            """
 
     end
 

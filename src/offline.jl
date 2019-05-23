@@ -3,12 +3,13 @@
 # offline step for Stochastic Dynamic Programming 
 
 
-# SDP
+# SDP 
 
-function compute_realization(sdp::SDP, cost::Function, dynamics::Function, variables::Variables,
-	interpolation::Interpolation)
+function compute_optimal_realization(sdp::SDP, cost::Function, dynamics::Function, 
+	variables::Variables, interpolation::Interpolation)
 	
 	v = Inf
+
 	for control in sdp.controls.iterator
 
 		control = collect(control)
@@ -24,18 +25,20 @@ function compute_realization(sdp::SDP, cost::Function, dynamics::Function, varia
 
 	end
 
+	return v
+
 end
 
 function compute_cost_to_go(sdp::SDP, cost::Function, dynamics::Function, variables::Variables,
-	noise_iterator::Iterators.Zip, interpolation::Interpolation)
+	interpolation::Interpolation)
 
 	realizations = Float64[] 
 	probabilities = Float64[]
 
-	for (noise, probability) in noise_iterator
+	for (noise, probability) in iterator(sdp.noises, variables.t+1)
 
 		variables.noise = collect(noise)
-		realization = compute_realization(sdp, cost, dynamics, variables, interpolation)
+		realization = compute_optimal_realization(sdp, cost, dynamics, variables, interpolation)
 
 		push!(realizations, realization)
 		push!(probabilities, probability)
@@ -50,15 +53,17 @@ end
 function fill_value_function!(sdp::SDP, cost::Function, dynamics::Function, variables::Variables,
 	value_functions::ArrayValueFunctions, interpolation::Interpolation)
 
-	noise_iterator = iterator(sdp.noises, variables.t+1)
+	value_function = ones(size(sdp.states))
 
 	for (state, index) in sdp.states.iterator
 
 		variables.state = collect(state)
-		value_functions[variables.t][index...] = compute_cost_to_go(sdp, cost, dynamics, 
-			variables, noise_iterator, interpolation)
+		value_function[index...] = compute_cost_to_go(sdp, cost, dynamics, 
+			variables, interpolation)
 
 	end
+
+	value_functions[variables.t] = value_function
 
 	return nothing
 
