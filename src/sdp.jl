@@ -3,27 +3,27 @@
 # functions for Stochastic Dynamic Programming 
 
 
-function admissible_state(x::Array{Float64}, states::Grid)
-	"""check if x is in states: return a boolean
-
-	x > state point
-	states > discretized state space
-
-	"""
-
-	for i in 1:length(x)
-
-		if x[i] < states[i][1]
-			return false
-		elseif x[i] > states[i][end]
-			return false
-		end
-
-	end
-
-	return true
-
-end
+#function admissible_state(x::Array{Float64}, states::Grid)
+#	"""check if x is in states: return a boolean
+#
+#	x > state point
+#	states > discretized state space
+#
+#	"""
+#
+#	for i in 1:length(x)
+#
+#		if x[i] < states[i][1]
+#			return false
+#		elseif x[i] > states[i][end]
+#			return false
+#		end
+#
+#	end
+#
+#	return true
+#
+#end
 
 function compute_value_functions(train_noises::Union{Noise, Array{Noise}}, 
 	controls::Grid, states::Grid, dynamics::Function, cost::Function, 
@@ -34,7 +34,7 @@ function compute_value_functions(train_noises::Union{Noise, Array{Noise}},
 	train_noise > noise training data
 	controls, states > discretized control and state spaces 
 	dynamics > function(x, u, w) returning next state
-	cost > function(p, x, u, w) returning stagewise cost
+	cost > function(p, x, u, w) returning stagewise cost 
 	price > price per period
 	horizon > time horizon
 	order > interpolation order

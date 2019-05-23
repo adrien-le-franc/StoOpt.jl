@@ -9,12 +9,14 @@
 abstract type ValueFunctions end
 
 
-struct ArrayValueFunctions <: ValueFunctions
+mutable struct ArrayValueFunctions <: ValueFunctions
 	functions::Array{Float64}
 end
 
 Base.getindex(vf::ArrayValueFunctions, t::Int64) = vf.functions[t, ..]
+Base.setindex!(vf::ArrayValueFunctions, x::Array{Float64}, t::Int64) = (vf.functions[t, ..] = x)
 Base.:(==)(vf1::ArrayValueFunctions, vf2::ArrayValueFunctions) = (vf1.functions == vf2.functions)
+Base.size(vf::ArrayValueFunctions) = size(vf.functions)
 ArrayValueFunctions(t::Tuple{Vararg{Int64}}) = ArrayValueFunctions(zeros(t))
 
 
@@ -22,33 +24,29 @@ ArrayValueFunctions(t::Tuple{Vararg{Int64}}) = ArrayValueFunctions(zeros(t))
 
 
 struct Grid{T <: StepRangeLen{Float64}}
-	states::Array{T}
+	axis::Array{T}
+	iterator::Union{Iterators.ProductIterator, Iterators.Zip}
 end
 
-Base.getindex(g::Grid, i::Int) = g.states[i]
-Base.size(g::Grid) = Tuple([length(g[i]) for i in 1:length(g.states)])
+Base.getindex(g::Grid, i::Int) = g.axis[i]
+Base.size(g::Grid) = Tuple([length(g[i]) for i in 1:length(g.axis)])
 
-function Grid(states::Vararg{T}) where T <: StepRangeLen{Float64}
-	Grid(collect(states))
-end
-
-function run(g::Grid{T}; enumerate=false) where T <: StepRangeLen{Float64}
-
-	if !enumerate
-		return Iterators.product(g.states...)
-	else
-		grid_size = size(g)
+function Grid(axis::Vararg{T}; enumerate=false) where T <: StepRangeLen{Float64}
+	axis = collect(axis)
+	if enumerate == true
+		grid_size = [length(axis[i]) for i in 1:length(axis)]
 		indices = Iterators.product([1:i for i in grid_size]...)
-		return zip(Iterators.product(g.states...), indices)
+		return Grid(axis, zip(Iterators.product(axis...), indices))
+	else
+		return Grid(axis, Iterators.product(axis...))
 	end
-
 end
 
-#function grid_steps(g::Grid)
-#	"""grid steps, assuming a regular space grid: return type Tuple"""
-#	dimension = length(size(g))
-#	grid_steps = [g.states[i][2] - g.states[i][1] for i in 1:dimension]
-#end
+function steps(g::Grid)
+	"""grid steps, assuming a regular grid"""
+	dimension = length(size(g))
+	grid_steps = [g.axis[i][2] - g.axis[i][1] for i in 1:dimension]
+end
 
 
 # Types for handling noise processes 
@@ -68,7 +66,7 @@ end
 
 Base.size(tp::TimeProcess) = (tp.horizon, tp.cardinal, tp.dimension)
 Base.getindex(tp::TimeProcess, t::Int64) = tp.data[t, :, :]
-run(tp::TimeProcess, t::Int64) = eachrow(tp[t])
+iterator(tp::TimeProcess, t::Int64) = eachrow(tp[t])
 
 function TimeProcess(x::Array{Float64,2})
 	horizon, cardinal = size(x)
@@ -90,7 +88,7 @@ end
 
 Base.size(p::Probability) = (p.horizon, p.cardinal)
 Base.getindex(p::Probability, t::Int64) = p.data[t, :]
-run(p::Probability, t::Int64) = Iterators.Stateful(p[t])
+iterator(p::Probability, t::Int64) = Iterators.Stateful(p[t])
 
 
 struct NNoise
@@ -107,7 +105,7 @@ struct NNoise
 	end
 end
 
-run(n::NNoise, t::Int64) = zip(run(n.w, t), run(n.pw, t))
+iterator(n::NNoise, t::Int64) = zip(iterator(n.w, t), iterator(n.pw, t))
 NNoise(w::Array{Float64}, pw::Array{Float64}) = NNoise(TimeProcess(w), Probability(pw))
 
 function NNoise(data::Array{Float64,2}, k::Int64) 
@@ -126,12 +124,46 @@ function NNoise(data::Array{Float64,2}, k::Int64)
 		w_t = reshape(data[t, :], (1, :))
 		kmeans_w = kmeans(w_t, k)
 		w[t, :] = kmeans_w.centers
-		pw[t, :] = kmeans_w.cweights / n_data
+		pw[t, :] = kmeans_w.counts / n_data
 	end
 
 	return NNoise(w, pw)
 
 end
+
+
+# Type for interpolation
+
+
+struct Interpolation{T <: Interpolations.BSplineInterpolation{Float64}}
+	interpolator::T
+	grid_steps::Array{Float64,1}
+end
+
+function eval_interpolation(x::Array{Float64,1}, i::Interpolation)
+
+	println("x: $(x)")
+	println(x ./ i.grid_steps .+ 1.)
+
+	grid_position = x ./ i.grid_steps .+ 1.
+	return i.interpolator(x...)
+end
+
+
+# Type containing all variables for Stochastic Optimal Control
+
+
+mutable struct Variables
+	t::Int64
+	state::Union{Array{Float64,1}, Nothing}
+	control::Union{Array{Float64,1}, Nothing}
+	noise::Union{Array{Float64,1}, Nothing}
+end
+
+Variables(t::Int64) = Variables(t, nothing, nothing, nothing)
+
+
+
 
 
 
