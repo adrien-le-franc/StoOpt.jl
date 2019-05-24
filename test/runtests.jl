@@ -25,7 +25,7 @@ current_directory = @__DIR__
         function test_noise_iterator_1d()
         	w = reshape(collect(1:6.0), 3, 2)
         	pw = ones(3, 2)*0.5
-        	noise = NNoise(w, pw)
+        	noise = Noise(w, pw)
         	for (val, proba) in StoOpt.iterator(noise, 3)
         		if (val[1], proba) == (6.0, 0.5)
         			return 1
@@ -37,7 +37,7 @@ current_directory = @__DIR__
         function test_noise_iterator_2d()
         	w = reshape(collect(1:12.0), 3, 2, 2)
         	pw = ones(3, 2)*0.5
-        	noise = NNoise(w, pw)
+        	noise = Noise(w, pw)
         	for (val, proba) in StoOpt.iterator(noise, 3)
         		if (val, proba) == ([6.0, 12.0], 0.5)
         			return 1
@@ -48,7 +48,7 @@ current_directory = @__DIR__
 
         function test_noise_kmeans()
             data = rand(5, 100)
-            noise = NNoise(data, 3)
+            noise = Noise(data, 3)
             pw = noise.pw.data
             if size(pw)!= (5, 3)
                 return nothing
@@ -70,21 +70,23 @@ current_directory = @__DIR__
     end
 
     data = load(current_directory*"/data/test.jld")
-    noises = NNoise(data["w"], data["pw"])
+    noises = Noise(data["w"], data["pw"])
     states = Grid(0:0.1:1, enumerate=true)
     controls = Grid(-1:0.1:1)
     horizon = 96
     price = ones(96)*0.1
     price[28:84] .+= 0.05
-    cost_parameters = Dict("buy"=>price)
-    dynamics_parameters = Dict("charge"=>0.95, "discharge"=>0.95)
+    cost_parameters = Dict("buy"=>price, "umax"=>1.)
+    dynamics_parameters = Dict("charge"=>0.95, "discharge"=>0.95, "cmax"=>5., "umax"=>1.)
 
     function dynamics(m::SDP, t::Int64, x::Array{Float64}, u::Array{Float64}, w::Array{Float64})
+        normalize = m.dynamics_parameters["umax"]/m.dynamics_parameters["cmax"]
         return x + (m.dynamics_parameters["charge"]*max.(0,u) 
-            - max.(0,-u)/m.dynamics_parameters["discharge"])
+            - max.(0,-u)/m.dynamics_parameters["discharge"])*normalize
     end
 
     function cost(m::SDP, t::Int64, x::Array{Float64}, u::Array{Float64}, w::Array{Float64})
+        u = u*m.cost_parameters["umax"]
         return (m.cost_parameters["buy"][t]*max.(0, u+w))[1]
     end
 
@@ -104,28 +106,16 @@ current_directory = @__DIR__
                 0.048178640538937376)
 
             value_functions = StoOpt.ArrayValueFunctions((sdp.horizon, size(sdp.states)...))
-
             StoOpt.fill_value_function!(sdp, cost, dynamics, variables, value_functions,
                 interpolation)
 
+            @test isapprox(value_functions[horizon-1][11], 0.0012163218646055842,)
 
+            t = @elapsed value_functions = compute_value_functions(sdp, cost, dynamics)
 
-            println(value_functions)
-
-           
-            """
-
-
-            value_functions = compute_value_functions(sdp, cost, dynamics)
-
+            @test t < 8.
             @test value_functions[horizon] == zeros(size(states))
-
-            println(value_functions[1])
-            println(value_functions[horizon])
-
             @test all(value_functions[1] .> value_functions[horizon])
-
-            """
 
     end
 

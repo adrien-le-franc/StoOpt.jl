@@ -1,4 +1,4 @@
-# developed with Julia 1.0.3
+# developed with Julia 1.1.1
 #
 # models for stochastic optimal control
 
@@ -14,7 +14,7 @@ struct SDP <: DynamicProgrammingModel
 
 	states::Grid
 	controls::Grid
-	noises::NNoise
+	noises::Union{Noise, Nothing}
 	cost_parameters::Dict{String,Any}
 	dynamics_parameters::Dict{String,Any}
 	horizon::Int64
