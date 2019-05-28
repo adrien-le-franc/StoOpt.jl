@@ -23,4 +23,8 @@ include("offline.jl")
 
 export compute_value_functions
 
+include("online.jl")
+
+export compute_control
+
 end # module

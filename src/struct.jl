@@ -26,6 +26,7 @@ ArrayValueFunctions(t::Tuple{Vararg{Int64}}) = ArrayValueFunctions(zeros(t))
 struct Grid{T <: StepRangeLen{Float64}}
 	axis::Array{T}
 	iterator::Union{Iterators.ProductIterator, Iterators.Zip}
+	steps::Array{Float64}
 end
 
 Base.getindex(g::Grid, i::Int) = g.axis[i]
@@ -33,19 +34,15 @@ Base.size(g::Grid) = Tuple([length(g[i]) for i in 1:length(g.axis)])
 
 function Grid(axis::Vararg{T}; enumerate=false) where T <: StepRangeLen{Float64}
 	axis = collect(axis)
+	dimension = length(axis)
+	grid_steps = [axis[i][2] - axis[i][1] for i in 1:dimension]
 	if enumerate == true
 		grid_size = [length(axis[i]) for i in 1:length(axis)]
 		indices = Iterators.product([1:i for i in grid_size]...)
-		return Grid(axis, zip(Iterators.product(axis...), indices))
+		return Grid(axis, zip(Iterators.product(axis...), indices), grid_steps)
 	else
-		return Grid(axis, Iterators.product(axis...))
+		return Grid(axis, Iterators.product(axis...), grid_steps)
 	end
-end
-
-function steps(g::Grid)
-	"""grid steps, assuming a regular grid"""
-	dimension = length(size(g))
-	grid_steps = [g.axis[i][2] - g.axis[i][1] for i in 1:dimension]
 end
 
 

@@ -94,13 +94,12 @@ current_directory = @__DIR__
             
             sdp = SDP(states, controls, noises, cost_parameters, dynamics_parameters, horizon)
 
-            state_steps = StoOpt.steps(states)
             interpolation = StoOpt.Interpolation(interpolate(zeros(11), BSpline(Linear())),
-            state_steps)
-            variables = StoOpt.Variables(horizon-1, [0.0], nothing, [1.0])
+            states.steps)
+            variables = StoOpt.Variables(horizon-1, [0.0], [-0.1], nothing)
 
-            @test StoOpt.compute_optimal_realization(sdp, cost, dynamics, variables, 
-                interpolation) == 0.1
+            @test StoOpt.compute_expected_realization(sdp, cost, dynamics, variables, 
+                interpolation) == Inf
 
             @test isapprox(StoOpt.compute_cost_to_go(sdp, cost, dynamics, variables, interpolation),
                 0.048178640538937376)
@@ -116,6 +115,7 @@ current_directory = @__DIR__
             @test t < 8.
             @test value_functions[horizon] == zeros(size(states))
             @test all(value_functions[1] .> value_functions[horizon])
+            @test compute_control(sdp, cost, dynamics, 1, [0.0], value_functions) == [0.0]
 
     end
 
