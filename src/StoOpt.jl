@@ -1,6 +1,5 @@
 module StoOpt
 
-using ProgressMeter
 using Interpolations, StatsBase, Clustering
 using EllipsisNotation
 

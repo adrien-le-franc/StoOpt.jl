@@ -10,7 +10,7 @@ abstract type DynamicProgrammingModel <: AbstractModel end
 struct DummyModel <: AbstractModel end
 
 
-struct SDP <: DynamicProgrammingModel
+mutable struct SDP <: DynamicProgrammingModel
 
 	states::Grid
 	controls::Grid
