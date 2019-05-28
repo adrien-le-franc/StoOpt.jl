@@ -3,6 +3,13 @@
 # online step for Stochastic Dynamic Programming 
 
 
+# Dummy Model
+
+function compute_control(m::DummyModel, cost::Function, dynamics::Function, 
+		t::Int64, state::Array{Float64,1}, value_functions::Nothing)
+	return 0.0
+end
+
 # SDP
 
 function compute_control(sdp::SDP, cost::Function, dynamics::Function, 
