@@ -96,7 +96,7 @@ current_directory = @__DIR__
 
             interpolation = StoOpt.Interpolation(interpolate(zeros(11), BSpline(Linear())),
             states.steps)
-            variables = StoOpt.Variables(horizon-1, [0.0], [-0.1], nothing)
+            variables = StoOpt.Variables(horizon, [0.0], [-0.1], nothing)
 
             @test StoOpt.compute_expected_realization(sdp, cost, dynamics, variables, 
                 interpolation) == Inf
@@ -108,12 +108,12 @@ current_directory = @__DIR__
             StoOpt.fill_value_function!(sdp, cost, dynamics, variables, value_functions,
                 interpolation)
 
-            @test isapprox(value_functions[horizon-1][11], 0.0012163218646055842,)
+            @test isapprox(value_functions[horizon][11], 0.0012163218646055842,)
 
             t = @elapsed value_functions = compute_value_functions(sdp, cost, dynamics)
 
             @test t < 8.
-            @test value_functions[horizon] == zeros(size(states))
+            @test value_functions[horizon+1] == zeros(size(states))
             @test all(value_functions[1] .> value_functions[horizon])
             @test compute_control(sdp, cost, dynamics, 1, [0.0], value_functions) == [0.0]
 
