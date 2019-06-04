@@ -5,12 +5,16 @@
 
 abstract type AbstractModel end
 abstract type DynamicProgrammingModel <: AbstractModel end
+abstract type SdpModel <: DynamicProgrammingModel end
+abstract type AdpModel <: DynamicProgrammingModel end
+abstract type SddpModel <: AdpModel end
+abstract type RollingHorizonModel <: AbstractModel end
 
 
 struct DummyModel <: AbstractModel end
 
 
-mutable struct SDP <: DynamicProgrammingModel
+mutable struct SDP <: SdpModel
 
 	states::Grid
 	controls::Grid
@@ -22,15 +26,14 @@ mutable struct SDP <: DynamicProgrammingModel
 end
 
 
-#struct SDPaR <: SDP
-#end
-# Q: type for "stagewise dependence" models ?
-
-struct SDDP <: DynamicProgrammingModel
-
+struct SDDP <: SddpModel
 end
 
 
-struct MPC <: AbstractModel
+struct MPC <: RollingHorizonModel
+
+	cost_parameters::Dict{String,Any}
+	dynamics_parameters::Dict{String,Any}
+	horizon::Int64
 
 end

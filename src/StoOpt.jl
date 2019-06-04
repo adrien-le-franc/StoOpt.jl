@@ -10,7 +10,7 @@ export Grid, Noise
 
 include("models.jl")
 
-export AbstractModel, DynamicProgrammingModel
+export AbstractModel, DynamicProgrammingModel, SdpModel
 export DummyModel
 export SDP, SDDP, MPC
 

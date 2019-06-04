@@ -5,7 +5,7 @@
 
 # SDP
 
-function compute_control(sdp::SDP, cost::Function, dynamics::Function, 
+function compute_control(sdp::SdpModel, cost::Function, dynamics::Function, 
 	t::Int64, state::Array{Float64,1}, value_functions::ValueFunctions)
 	
 	variables = Variables(t, state, nothing, nothing)

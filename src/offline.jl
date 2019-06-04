@@ -5,7 +5,7 @@
 
 # SDP 
 
-function compute_expected_realization(sdp::SDP, cost::Function, dynamics::Function, 
+function compute_expected_realization(sdp::SdpModel, cost::Function, dynamics::Function, 
 	variables::Variables, interpolation::Interpolation)
 
 	realizations = Float64[] 
@@ -39,8 +39,8 @@ function compute_expected_realization(sdp::SDP, cost::Function, dynamics::Functi
 
 end 
 
-function compute_cost_to_go(sdp::SDP, cost::Function, dynamics::Function, variables::Variables,
-	interpolation::Interpolation)
+function compute_cost_to_go(sdp::SdpModel, cost::Function, dynamics::Function, 
+	variables::Variables, interpolation::Interpolation)
 
 	cost_to_go = Inf
 
@@ -56,8 +56,8 @@ function compute_cost_to_go(sdp::SDP, cost::Function, dynamics::Function, variab
 
 end
 
-function fill_value_function!(sdp::SDP, cost::Function, dynamics::Function, variables::Variables,
-	value_functions::ArrayValueFunctions, interpolation::Interpolation)
+function fill_value_function!(sdp::SdpModel, cost::Function, dynamics::Function, 
+	variables::Variables, value_functions::ArrayValueFunctions, interpolation::Interpolation)
 
 	value_function = ones(size(sdp.states))
 
@@ -75,7 +75,7 @@ function fill_value_function!(sdp::SDP, cost::Function, dynamics::Function, vari
 
 end
 
-function compute_value_functions(sdp::SDP, cost::Function, dynamics::Function)
+function compute_value_functions(sdp::SdpModel, cost::Function, dynamics::Function)
 
 	value_functions = ArrayValueFunctions((sdp.horizon+1, size(sdp.states)...))
 
