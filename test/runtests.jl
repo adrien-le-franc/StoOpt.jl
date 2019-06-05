@@ -25,8 +25,9 @@ current_directory = @__DIR__
         function test_noise_iterator_1d()
         	w = reshape(collect(1:6.0), 3, 2)
         	pw = ones(3, 2)*0.5
-        	noise = Noise(w, pw)
-        	for (val, proba) in StoOpt.iterator(noise, 3)
+        	noises = Noises(w, pw)
+            noise = RandomVariable(noises, 3)
+        	for (val, proba) in StoOpt.iterator(noise)
         		if (val[1], proba) == (6.0, 0.5)
         			return 1
         		end
@@ -37,8 +38,9 @@ current_directory = @__DIR__
         function test_noise_iterator_2d()
         	w = reshape(collect(1:12.0), 3, 2, 2)
         	pw = ones(3, 2)*0.5
-        	noise = Noise(w, pw)
-        	for (val, proba) in StoOpt.iterator(noise, 3)
+        	noises = Noises(w, pw)
+            noise = RandomVariable(noises, 3)
+        	for (val, proba) in StoOpt.iterator(noise)
         		if (val, proba) == ([6.0, 12.0], 0.5)
         			return 1
         		end
@@ -48,7 +50,7 @@ current_directory = @__DIR__
 
         function test_noise_kmeans()
             data = rand(5, 100)
-            noise = Noise(data, 3)
+            noise = Noises(data, 3)
             pw = noise.pw.data
             if size(pw)!= (5, 3)
                 return nothing
@@ -70,7 +72,7 @@ current_directory = @__DIR__
     end
 
     data = load(current_directory*"/data/test.jld")
-    noises = Noise(data["w"], data["pw"])
+    noises = Noises(data["w"], data["pw"])
     states = Grid(0:0.1:1, enumerate=true)
     controls = Grid(-1:0.1:1)
     horizon = 96
@@ -96,7 +98,7 @@ current_directory = @__DIR__
 
             interpolation = StoOpt.Interpolation(interpolate(zeros(11), BSpline(Linear())),
             states.steps)
-            variables = StoOpt.Variables(horizon, [0.0], [-0.1], nothing)
+            variables = StoOpt.Variables(horizon, [0.0], [-0.1], RandomVariable(noises, horizon))
 
             @test StoOpt.compute_expected_realization(sdp, cost, dynamics, variables, 
                 interpolation) == Inf
@@ -115,7 +117,8 @@ current_directory = @__DIR__
             @test t < 8.
             @test value_functions[horizon+1] == zeros(size(states))
             @test all(value_functions[1] .> value_functions[horizon])
-            @test compute_control(sdp, cost, dynamics, 1, [0.0], value_functions) == [0.0]
+            @test compute_control(sdp, cost, dynamics, 1, [0.0], RandomVariable(noises, 1),
+                value_functions) == [0.0]
 
     end
 

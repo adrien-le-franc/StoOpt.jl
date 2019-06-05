@@ -88,26 +88,25 @@ Base.getindex(p::Probability, t::Int64) = p.data[t, :]
 iterator(p::Probability, t::Int64) = Iterators.Stateful(p[t])
 
 
-struct Noise
+struct Noises
 	w::TimeProcess
 	pw::Probability
 
-	function Noise(w::TimeProcess, pw::Probability)
+	function Noises(w::TimeProcess, pw::Probability)
 		h_w, c_w, _ = size(w)
 		h_pw, c_pw = size(pw)
 		if (h_w, c_w) != (h_pw, c_pw)
-			error("Noise: noise size $(size(w)) not compatible with probabilities size $(size(pw))")
+			error("Noises: noise size $(size(w)) not compatible with probabilities size $(size(pw))")
 		end
 		new(w, pw)
 	end
 end
 
-iterator(n::Noise, t::Int64) = zip(iterator(n.w, t), iterator(n.pw, t))
-Noise(w::Array{Float64}, pw::Array{Float64}) = Noise(TimeProcess(w), Probability(pw))
+Noises(w::Array{Float64}, pw::Array{Float64}) = Noises(TimeProcess(w), Probability(pw))
 
-function Noise(data::Array{Float64,2}, k::Int64) 
+function Noises(data::Array{Float64,2}, k::Int64) 
 
-	"""dicretize noise space to k values using Kmeans: return type Noise
+	"""dicretize noise space to k values using Kmeans: return type Noises
 	data > time series data of dimension (horizon, n_data)
 	k > Kmeans parameter
 
@@ -124,9 +123,18 @@ function Noise(data::Array{Float64,2}, k::Int64)
 		pw[t, :] = kmeans_w.counts / n_data
 	end
 
-	return Noise(w, pw)
+	return Noises(w, pw)
 
 end
+
+
+struct RandomVariable
+	value::Array{Float64,2}
+	probability::Array{Float64,1}
+end
+
+RandomVariable(n::Noises, t::Int64) = RandomVariable(n.w[t], n.pw[t])
+iterator(rv::RandomVariable) = zip(eachrow(rv.value), Iterators.Stateful(rv.probability))
 
 
 # Type for interpolation
@@ -151,7 +159,7 @@ mutable struct Variables
 	t::Int64
 	state::Union{Array{Float64,1}, Nothing}
 	control::Union{Array{Float64,1}, Nothing}
-	noise::Union{Array{Float64,1}, Nothing}
+	noise::Union{RandomVariable, Nothing}
 end
 
-Variables(t::Int64) = Variables(t, nothing, nothing, nothing)
+Variables(t::Int64, rv::RandomVariable) = Variables(t, nothing, nothing, rv)

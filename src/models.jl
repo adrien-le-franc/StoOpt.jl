@@ -11,14 +11,11 @@ abstract type SddpModel <: AdpModel end
 abstract type RollingHorizonModel <: AbstractModel end
 
 
-struct DummyModel <: AbstractModel end
-
-
 mutable struct SDP <: SdpModel
 
 	states::Grid
 	controls::Grid
-	noises::Union{Noise, Nothing}
+	noises::Union{Noises, Nothing}
 	cost_parameters::Dict{String,Any}
 	dynamics_parameters::Dict{String,Any}
 	horizon::Int64
@@ -32,6 +29,7 @@ end
 
 struct MPC <: RollingHorizonModel
 
+	forecasts::Union{Array{Float64}, Nothing}
 	cost_parameters::Dict{String,Any}
 	dynamics_parameters::Dict{String,Any}
 	horizon::Int64

@@ -6,9 +6,9 @@
 # SDP
 
 function compute_control(sdp::SdpModel, cost::Function, dynamics::Function, 
-	t::Int64, state::Array{Float64,1}, value_functions::ValueFunctions)
+	t::Int64, state::Array{Float64,1}, noise::RandomVariable, value_functions::ValueFunctions)
 	
-	variables = Variables(t, state, nothing, nothing)
+	variables = Variables(t, state, nothing, noise)
 	interpolation = Interpolation(interpolate(value_functions[t+1], BSpline(Linear())),
 			sdp.states.steps)
 

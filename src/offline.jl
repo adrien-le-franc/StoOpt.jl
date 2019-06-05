@@ -12,7 +12,7 @@ function compute_expected_realization(sdp::SdpModel, cost::Function, dynamics::F
 	probabilities = Float64[]
 	reject_control = Float64[]
 
-	for (noise, probability) in iterator(sdp.noises, variables.t)
+	for (noise, probability) in iterator(variables.noise)
 
 		noise = collect(noise)
 		next_state = dynamics(sdp, variables.t, variables.state, variables.control, noise)
@@ -81,7 +81,7 @@ function compute_value_functions(sdp::SdpModel, cost::Function, dynamics::Functi
 
 	for t in sdp.horizon:-1:1
 
-		variables = Variables(t)
+		variables = Variables(t, RandomVariable(sdp.noises, t))
 		interpolation = Interpolation(interpolate(value_functions[t+1], BSpline(Linear())),
 			sdp.states.steps)
 

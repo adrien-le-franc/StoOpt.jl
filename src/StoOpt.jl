@@ -6,7 +6,7 @@ using EllipsisNotation
 include("struct.jl")
 
 export ValueFunctions, ArrayValueFunctions
-export Grid, Noise
+export Grid, Noises, RandomVariable
 
 include("models.jl")
 
