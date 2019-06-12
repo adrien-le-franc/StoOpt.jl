@@ -25,13 +25,3 @@ end
 
 struct SDDP <: SddpModel
 end
-
-
-struct MPC <: RollingHorizonModel
-
-	forecasts::Union{Array{Float64}, Nothing}
-	cost_parameters::Dict{String,Any}
-	dynamics_parameters::Dict{String,Any}
-	horizon::Int64
-
-end

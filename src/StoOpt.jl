@@ -1,6 +1,6 @@
 module StoOpt
 
-using Interpolations, StatsBase, Clustering
+using Interpolations, StatsBase, Clustering, JuMP
 using EllipsisNotation
 
 include("struct.jl")
@@ -10,9 +10,8 @@ export Grid, Noises, RandomVariable
 
 include("models.jl")
 
-export AbstractModel, DynamicProgrammingModel, SdpModel
-export DummyModel
-export SDP, SDDP, MPC
+export AbstractModel, DynamicProgrammingModel, SdpModel, RollingHorizonModel
+export SDP, SDDP
 
 include("utils.jl")
 
