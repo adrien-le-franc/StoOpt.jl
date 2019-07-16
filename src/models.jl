@@ -24,4 +24,10 @@ end
 
 
 struct SDDP <: SddpModel
+
+	noises::Union{Noises, Nothing}
+	cost_parameters::Dict{String,Any}
+	dynamics_parameters::Dict{String,Any}
+	horizon::Int64
+
 end

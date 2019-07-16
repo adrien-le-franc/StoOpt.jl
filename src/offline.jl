@@ -94,3 +94,39 @@ function compute_value_functions(sdp::SdpModel, cost::Function, dynamics::Functi
 end
 
 # SDDP 
+
+function initialize_sddp(sddp::SddpModel)
+
+	models = JuMP.Model[]
+
+	for t in 1:sddp.horizon
+
+		push!(model, )
+
+	end
+
+end
+
+function forward_pass()
+end
+
+function backward_pass()
+end
+
+function compute_value_functions(sddp::SddpModel, cost::Function, dynamics::Function; 
+	max_iterations::Int64=100)
+
+	x_0, value_functions = initialize_sddp()
+	
+	for k in 1:max_iterations
+
+		trajectory = forward_pass()
+		stopping_criterion = backward_pass!(trajectory, value_functions)
+
+	end
+
+	return value_functions
+
+end
+
+

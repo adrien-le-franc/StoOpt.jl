@@ -20,6 +20,13 @@ Base.size(vf::ArrayValueFunctions) = size(vf.functions)
 ArrayValueFunctions(t::Tuple{Vararg{Int64}}) = ArrayValueFunctions(zeros(t))
 
 
+mutable struct CutsValueFunctions <: ValueFunctions
+	functions::Array{JuMP.Model}
+end
+
+
+
+
 # Type for discretized spaces 
 
 

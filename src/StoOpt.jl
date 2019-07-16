@@ -3,6 +3,9 @@ module StoOpt
 using Interpolations, StatsBase, Clustering, JuMP
 using EllipsisNotation
 
+import JuMP
+using JuMP: Model, with_optimizer, @variable, @constraint, @expression, @objective
+
 include("struct.jl")
 
 export ValueFunctions, ArrayValueFunctions

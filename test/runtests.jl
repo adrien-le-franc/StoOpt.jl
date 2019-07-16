@@ -122,5 +122,11 @@ current_directory = @__DIR__
 
     end
 
+    @testset "SDDP" begin
+        
+        
+
+    end
+
 end
 
