@@ -15,14 +15,14 @@ function compute_expected_realization(sdp::SdpModel, cost::Function, dynamics::F
 	for (noise, probability) in iterator(variables.noise)
 
 		noise = collect(noise)
-		next_state = dynamics(sdp, variables.t, variables.state, variables.control, noise)
+		next_state = dynamics(variables.t, variables.state, variables.control, noise)
 
 		if !admissible_state!(next_state, sdp.states)
 			push!(reject_control, probability)
 		end
 
 		next_value_function = eval_interpolation(next_state, interpolation)
-		realization = cost(sdp, variables.t, variables.state, variables.control, noise) + 
+		realization = cost(variables.t, variables.state, variables.control, noise) + 
 			next_value_function
 
 		push!(realizations, realization)
@@ -92,6 +92,7 @@ function compute_value_functions(sdp::SdpModel, cost::Function, dynamics::Functi
 	return value_functions
 
 end
+
 
 # SDDP 
 

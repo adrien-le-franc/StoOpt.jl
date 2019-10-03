@@ -78,23 +78,24 @@ current_directory = @__DIR__
     horizon = 96
     price = ones(96)*0.1
     price[28:84] .+= 0.05
-    cost_parameters = Dict("buy"=>price, "umax"=>1.)
-    dynamics_parameters = Dict("charge"=>0.95, "discharge"=>0.95, "cmax"=>5., "umax"=>1.)
+    cmax = 5.
+    umax = 1.
+    r = 0.95
 
-    function dynamics(m::SDP, t::Int64, x::Array{Float64}, u::Array{Float64}, w::Array{Float64})
-        normalize = m.dynamics_parameters["umax"]/m.dynamics_parameters["cmax"]
-        return x + (m.dynamics_parameters["charge"]*max.(0,u) 
-            - max.(0,-u)/m.dynamics_parameters["discharge"])*normalize
+    function cost(t::Int64, x::Array{Float64,1}, u::Array{Float64,1}, w::Array{Float64,1})
+        u = u[1]*umax
+        demand = u + w[1]
+        return price[t]*max(0.,demand) 
     end
 
-    function cost(m::SDP, t::Int64, x::Array{Float64}, u::Array{Float64}, w::Array{Float64})
-        u = u*m.cost_parameters["umax"]
-        return (m.cost_parameters["buy"][t]*max.(0, u+w))[1]
+    function dynamics(t::Int64, x::Array{Float64,1}, u::Array{Float64,1}, w::Array{Float64,1})
+        scale_factor = umax/cmax
+        return x + (r*max.(0.,u) - max.(0.,-u)/r)*scale_factor
     end
 
     @testset "SDP" begin
             
-            sdp = SDP(states, controls, noises, cost_parameters, dynamics_parameters, horizon)
+            sdp = SDP(states, controls, noises, horizon)
 
             interpolation = StoOpt.Interpolation(interpolate(zeros(11), BSpline(Linear())),
             states.steps)
@@ -117,16 +118,12 @@ current_directory = @__DIR__
             @test t < 8.
             @test value_functions[horizon+1] == zeros(size(states))
             @test all(value_functions[1] .> value_functions[horizon])
+            @test value_functions[1][1] > value_functions[1][end]
             @test compute_control(sdp, cost, dynamics, 1, [0.0], RandomVariable(noises, 1),
                 value_functions) == [0.0]
 
     end
 
-    @testset "SDDP" begin
-        
-        
-
-    end
-
+    
 end
 
