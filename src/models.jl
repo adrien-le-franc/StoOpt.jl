@@ -16,6 +16,8 @@ mutable struct SDP <: SdpModel
 	states::Grid
 	controls::Grid
 	noises::Union{Noises, Nothing}
+	cost::Function
+	dynamics::Function
 	horizon::Int64
 
 end

@@ -95,35 +95,33 @@ current_directory = @__DIR__
 
     @testset "SDP" begin
             
-            sdp = SDP(states, controls, noises, horizon)
+            sdp = SDP(states, controls, noises, cost, dynamics, horizon)
 
             interpolation = StoOpt.Interpolation(interpolate(zeros(11), BSpline(Linear())),
             states.steps)
             variables = StoOpt.Variables(horizon, [0.0], [-0.1], RandomVariable(noises, horizon))
 
-            @test StoOpt.compute_expected_realization(sdp, cost, dynamics, variables, 
-                interpolation) == Inf
+            @test StoOpt.compute_expected_realization(sdp, variables, interpolation) == Inf
 
-            @test isapprox(StoOpt.compute_cost_to_go(sdp, cost, dynamics, variables, interpolation),
+            @test isapprox(StoOpt.compute_cost_to_go(sdp, variables, interpolation),
                 0.048178640538937376)
 
             value_functions = StoOpt.ArrayValueFunctions((sdp.horizon, size(sdp.states)...))
-            StoOpt.fill_value_function!(sdp, cost, dynamics, variables, value_functions,
+            StoOpt.fill_value_function!(sdp, variables, value_functions,
                 interpolation)
 
             @test isapprox(value_functions[horizon][11], 0.0012163218646055842,)
 
-            t = @elapsed value_functions = compute_value_functions(sdp, cost, dynamics)
+            t = @elapsed value_functions = compute_value_functions(sdp)
 
             @test t < 8.
             @test value_functions[horizon+1] == zeros(size(states))
             @test all(value_functions[1] .> value_functions[horizon])
             @test value_functions[1][1] > value_functions[1][end]
-            @test compute_control(sdp, cost, dynamics, 1, [0.0], RandomVariable(noises, 1),
+            @test compute_control(sdp, 1, [0.0], RandomVariable(noises, 1), 
                 value_functions) == [0.0]
 
     end
-
     
 end
 

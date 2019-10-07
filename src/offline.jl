@@ -5,8 +5,8 @@
 
 # SDP 
 
-function compute_expected_realization(sdp::SdpModel, cost::Function, dynamics::Function, 
-	variables::Variables, interpolation::Interpolation)
+function compute_expected_realization(sdp::SdpModel, variables::Variables, 
+	interpolation::Interpolation)
 
 	realizations = Float64[] 
 	probabilities = Float64[]
@@ -15,14 +15,14 @@ function compute_expected_realization(sdp::SdpModel, cost::Function, dynamics::F
 	for (noise, probability) in iterator(variables.noise)
 
 		noise = collect(noise)
-		next_state = dynamics(variables.t, variables.state, variables.control, noise)
+		next_state = sdp.dynamics(variables.t, variables.state, variables.control, noise)
 
 		if !admissible_state!(next_state, sdp.states)
 			push!(reject_control, probability)
 		end
 
 		next_value_function = eval_interpolation(next_state, interpolation)
-		realization = cost(variables.t, variables.state, variables.control, noise) + 
+		realization = sdp.cost(variables.t, variables.state, variables.control, noise) + 
 			next_value_function
 
 		push!(realizations, realization)
@@ -39,15 +39,14 @@ function compute_expected_realization(sdp::SdpModel, cost::Function, dynamics::F
 
 end 
 
-function compute_cost_to_go(sdp::SdpModel, cost::Function, dynamics::Function, 
-	variables::Variables, interpolation::Interpolation)
+function compute_cost_to_go(sdp::SdpModel, variables::Variables, interpolation::Interpolation)
 
 	cost_to_go = Inf
 
 	for control in sdp.controls.iterator
 
 		variables.control = collect(control)
-		realization = compute_expected_realization(sdp, cost, dynamics, variables, interpolation)
+		realization = compute_expected_realization(sdp, variables, interpolation)
 		cost_to_go = min(cost_to_go, realization)
 
 	end
@@ -56,16 +55,15 @@ function compute_cost_to_go(sdp::SdpModel, cost::Function, dynamics::Function,
 
 end
 
-function fill_value_function!(sdp::SdpModel, cost::Function, dynamics::Function, 
-	variables::Variables, value_functions::ArrayValueFunctions, interpolation::Interpolation)
+function fill_value_function!(sdp::SdpModel, variables::Variables, 
+	value_functions::ArrayValueFunctions, interpolation::Interpolation)
 
 	value_function = ones(size(sdp.states))
 
 	for (state, index) in sdp.states.iterator
 
 		variables.state = collect(state)
-		value_function[index...] = compute_cost_to_go(sdp, cost, dynamics, 
-			variables, interpolation)
+		value_function[index...] = compute_cost_to_go(sdp, variables, interpolation)
 
 	end
 
@@ -75,7 +73,7 @@ function fill_value_function!(sdp::SdpModel, cost::Function, dynamics::Function,
 
 end
 
-function compute_value_functions(sdp::SdpModel, cost::Function, dynamics::Function)
+function compute_value_functions(sdp::SdpModel)
 
 	value_functions = ArrayValueFunctions((sdp.horizon+1, size(sdp.states)...))
 
@@ -85,7 +83,7 @@ function compute_value_functions(sdp::SdpModel, cost::Function, dynamics::Functi
 		interpolation = Interpolation(interpolate(value_functions[t+1], BSpline(Linear())),
 			sdp.states.steps)
 
-		fill_value_function!(sdp, cost, dynamics, variables, value_functions, interpolation)
+		fill_value_function!(sdp, variables, value_functions, interpolation)
 
 	end
 

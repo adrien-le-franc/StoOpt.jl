@@ -5,8 +5,8 @@
 
 # SDP
 
-function compute_control(sdp::SdpModel, cost::Function, dynamics::Function, 
-	t::Int64, state::Array{Float64,1}, noise::RandomVariable, value_functions::ValueFunctions)
+function compute_control(sdp::SdpModel, t::Int64, state::Array{Float64,1}, 
+	noise::RandomVariable, value_functions::ValueFunctions)
 	
 	variables = Variables(t, state, nothing, noise)
 	interpolation = Interpolation(interpolate(value_functions[t+1], BSpline(Linear())),
@@ -18,7 +18,7 @@ function compute_control(sdp::SdpModel, cost::Function, dynamics::Function,
 	for control in sdp.controls.iterator
 
 		variables.control = collect(control)
-		realization = compute_expected_realization(sdp, cost, dynamics, variables, interpolation)
+		realization = compute_expected_realization(sdp, variables, interpolation)
 
 		if realization < cost_to_go
 			cost_to_go = realization
