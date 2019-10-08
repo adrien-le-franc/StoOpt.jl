@@ -94,6 +94,8 @@ end
 
 # SDDP 
 
+"""
+
 function initialize_sddp(sddp::SddpModel)
 
 	models = JuMP.Model[]
@@ -128,4 +130,4 @@ function compute_value_functions(sddp::SddpModel, cost::Function, dynamics::Func
 
 end
 
-
+"""

@@ -95,7 +95,7 @@ current_directory = @__DIR__
 
     @testset "SDP" begin
             
-            sdp = SDP(states, controls, noises, cost, dynamics, horizon)
+            sdp = StoOpt.SDP(states, controls, noises, cost, dynamics, horizon)
 
             interpolation = StoOpt.Interpolation(interpolate(zeros(11), BSpline(Linear())),
             states.steps)

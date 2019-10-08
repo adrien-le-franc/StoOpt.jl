@@ -21,7 +21,7 @@ ArrayValueFunctions(t::Tuple{Vararg{Int64}}) = ArrayValueFunctions(zeros(t))
 
 
 mutable struct CutsValueFunctions <: ValueFunctions
-	functions::Array{JuMP.Model}
+	#functions::Array{JuMP.Model}
 end
 
 
