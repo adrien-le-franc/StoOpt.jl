@@ -94,18 +94,18 @@ end
 
 # SDDP 
 
-"""
 
 function initialize_sddp(sddp::SddpModel)
 
-	models = JuMP.Model[]
+	model = Model(with_optimizer(CPLEX.Optimizer))
+    MOI.set(model, MOI.RawParameter("CPX_PARAM_SCRIND"), 0)
 
-	for t in 1:sddp.horizon
+end
 
-		push!(model, )
+function update_polyhedral_cost!()
+end
 
-	end
-
+function update_polyhedral_value_function!()
 end
 
 function forward_pass()
@@ -114,8 +114,7 @@ end
 function backward_pass()
 end
 
-function compute_value_functions(sddp::SddpModel, cost::Function, dynamics::Function; 
-	max_iterations::Int64=100)
+function compute_value_functions(sddp::SddpModel; max_iterations::Int64=10)
 
 	x_0, value_functions = initialize_sddp()
 	
@@ -129,5 +128,3 @@ function compute_value_functions(sddp::SddpModel, cost::Function, dynamics::Func
 	return value_functions
 
 end
-
-"""

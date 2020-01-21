@@ -5,6 +5,8 @@
 using StoOpt, JLD, Test
 using Interpolations
 
+using JuMP
+
 current_directory = @__DIR__
 
 
@@ -76,7 +78,7 @@ current_directory = @__DIR__
     states = Grid(0:0.1:1, enumerate=true)
     controls = Grid(-1:0.1:1)
     horizon = 96
-    price = ones(96)*0.1
+    price = ones(horizon)*0.1
     price[28:84] .+= 0.05
     cmax = 5.
     umax = 1.
@@ -121,6 +123,34 @@ current_directory = @__DIR__
             @test compute_control(sdp, 1, [0.0], RandomVariable(noises, 1), 
                 value_functions) == [0.0]
 
+    end
+
+    @testset "SDDP" begin
+
+            state_bounds = StoOpt.Bounds([0.], [1.])
+            control_bounds = StoOpt.Bounds([0., 0.], [1., 1.])
+            horizon = 96
+            buy_price = price
+            sell_price = ones(horizon)*0.7
+
+            function update_cost!(m::Model, t::Int64, noises::Noises)
+                set_normalized_coefficient(m[:cost_constraints][1], m[:control][1], buy_price[t])
+                set_normalized_coefficient(m[:cost_constraints][1], m[:control][2], -buy_price[t])
+                set_normalized_coefficient(m[:cost_constraints][1], m[:auxiliary_cost], -1)
+                set_normalized_rhs(m[:cost_constraints][1], -buy_price[t]*noises.w[t][1])
+
+                set_normalized_coefficient(m[:cost_constraints][2], m[:control][1], sell_price[t])
+                set_normalized_coefficient(m[:cost_constraints][2], m[:control][2], -sell_price[t])
+                set_normalized_coefficient(m[:cost_constraints][2], m[:auxiliary_cost], -1)
+                set_normalized_rhs(m[:cost_constraints][2], -sell_price[t]*noises.w[t][1])
+            end 
+
+            cost = StoOpt.PolyhedralCost(2, update_cost!)
+
+            function dynamics() end
+
+            sddp = StoOpt.SDDP(state_bounds, control_bounds, noises, cost, dynamics, horizon) 
+            @test typeof(sddp) <: StoOpt.SDDP
     end
     
 end

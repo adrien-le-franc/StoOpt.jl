@@ -53,6 +53,33 @@ function Grid(axis::Vararg{T}; enumerate=false) where T <: StepRangeLen{Float64}
 end
 
 
+# Type for continuous spaces
+
+
+struct Bounds
+	lower_bounds::Array{Float64,1}
+	upper_bounds::Array{Float64,1}
+	n_variables::Int64
+
+	function Bounds(lower_bounds::Array{Float64,1}, upper_bounds::Array{Float64,1})
+		
+		if length(upper_bounds) != length(lower_bounds)
+			error("Bounds: lengths of upper and lower bounds do not match")
+		end
+		if !all(lower_bounds .<= upper_bounds)
+			error("Bounds: lower_bounds .<= upper_bounds is not true")
+		end
+		new(lower_bounds, upper_bounds, length(upper_bounds))
+	end
+end
+
+
+struct PolyhedralCost
+	n_cuts::Int64
+	update_cost!::Function
+end
+
+
 # Types for handling noise processes 
 
 

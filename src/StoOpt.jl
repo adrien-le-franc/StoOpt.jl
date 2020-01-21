@@ -2,6 +2,9 @@ module StoOpt
 
 using Interpolations, StatsBase, Clustering
 using EllipsisNotation
+using JuMP, Clp # ??
+using MathOptInterface
+const MOI = MathOptInterface
 
 include("struct.jl")
 
@@ -10,9 +13,6 @@ export Grid, Noises, RandomVariable
 
 include("models.jl")
 include("utils.jl")
-
-export admissible_state
-
 include("offline.jl")
 
 export compute_value_functions
