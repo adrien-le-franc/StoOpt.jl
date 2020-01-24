@@ -6,88 +6,88 @@
 # SDP 
 
 function compute_expected_realization(sdp::SdpModel, variables::Variables, 
-	interpolation::Interpolation)
+    interpolation::Interpolation)
 
-	realizations = Float64[] 
-	probabilities = Float64[]
-	reject_control = Float64[]
+    realizations = Float64[] 
+    probabilities = Float64[]
+    reject_control = Float64[]
 
-	for (noise, probability) in iterator(variables.noise)
+    for (noise, probability) in iterator(variables.noise)
 
-		noise = collect(noise)
-		next_state = sdp.dynamics(variables.t, variables.state, variables.control, noise)
+        noise = collect(noise)
+        next_state = sdp.dynamics(variables.t, variables.state, variables.control, noise)
 
-		if !admissible_state!(next_state, sdp.states)
-			push!(reject_control, probability)
-		end
+        if !admissible_state!(next_state, sdp.states)
+            push!(reject_control, probability)
+        end
 
-		next_value_function = eval_interpolation(next_state, interpolation)
-		realization = sdp.cost(variables.t, variables.state, variables.control, noise) + 
-			next_value_function
+        next_value_function = eval_interpolation(next_state, interpolation)
+        realization = sdp.cost(variables.t, variables.state, variables.control, noise) + 
+            next_value_function
 
-		push!(realizations, realization)
-		push!(probabilities, probability)
+        push!(realizations, realization)
+        push!(probabilities, probability)
 
-	end
+    end
 
-	if isapprox(sum(reject_control), 1.0)
-		return Inf
-	else
-		expected_cost_to_go = realizations'*probabilities
-		return expected_cost_to_go
-	end
+    if isapprox(sum(reject_control), 1.0)
+        return Inf
+    else
+        expected_cost_to_go = realizations'*probabilities
+        return expected_cost_to_go
+    end
 
 end 
 
 function compute_cost_to_go(sdp::SdpModel, variables::Variables, interpolation::Interpolation)
 
-	cost_to_go = Inf
+    cost_to_go = Inf
 
-	for control in sdp.controls.iterator
+    for control in sdp.controls.iterator
 
-		variables.control = collect(control)
-		realization = compute_expected_realization(sdp, variables, interpolation)
-		cost_to_go = min(cost_to_go, realization)
+        variables.control = collect(control)
+        realization = compute_expected_realization(sdp, variables, interpolation)
+        cost_to_go = min(cost_to_go, realization)
 
-	end
+    end
 
-	return cost_to_go
+    return cost_to_go
 
 end
 
 function fill_value_function!(sdp::SdpModel, variables::Variables, 
-	value_functions::ArrayValueFunctions, interpolation::Interpolation)
+    value_functions::ArrayValueFunctions, interpolation::Interpolation)
 
-	value_function = ones(size(sdp.states))
+    value_function = ones(size(sdp.states))
 
-	for (state, index) in sdp.states.iterator
+    for (state, index) in sdp.states.iterator
 
-		variables.state = collect(state)
-		value_function[index...] = compute_cost_to_go(sdp, variables, interpolation)
+        variables.state = collect(state)
+        value_function[index...] = compute_cost_to_go(sdp, variables, interpolation)
 
-	end
+    end
 
-	value_functions[variables.t] = value_function
+    value_functions[variables.t] = value_function
 
-	return nothing
+    return nothing
 
 end
 
 function compute_value_functions(sdp::SdpModel)
 
-	value_functions = ArrayValueFunctions((sdp.horizon+1, size(sdp.states)...))
+    value_functions = ArrayValueFunctions((sdp.horizon+1, size(sdp.states)...))
 
-	for t in sdp.horizon:-1:1
+    for t in sdp.horizon:-1:1
 
-		variables = Variables(t, RandomVariable(sdp.noises, t))
-		interpolation = Interpolation(interpolate(value_functions[t+1], BSpline(Linear())),
-			sdp.states.steps)
+        variables = Variables(t, RandomVariable(sdp.noises, t))
+        interpolation = Interpolation(interpolate(value_functions[t+1], BSpline(Linear())),
+            sdp.states.steps)
 
-		fill_value_function!(sdp, variables, value_functions, interpolation)
+        fill_value_function!(sdp, variables, value_functions, interpolation)
 
-	end
+    end
 
-	return value_functions
+    return value_functions
 
 end
 
@@ -95,20 +95,34 @@ end
 # SDDP 
 
 
-function initialize_sddp(sddp::SddpModel)
-
-	model = Model(with_optimizer(CPLEX.Optimizer))
-    MOI.set(model, MOI.RawParameter("CPX_PARAM_SCRIND"), 0)
+function initialize_sddp(sddp::SDDP)
 
 end
 
-function update_polyhedral_cost!()
+function update_polyhedral_cost!(sddp::SDDP, t::Int64)
+    for j in 1:sddp.noises.w.cardinal
+        sddp.cost.update_cost!(sddp.model[:cost_constraints][:, j], t, 
+            sddp.model[:state], sddp.model[:control], sddp.noises.w[t][j, :])
+    end
+    return nothing
 end
 
-function update_polyhedral_value_function!()
+function update_polyhedral_value_function!(sddp::SDDP)
+    for j in 1:sddp.noises.w.cardinal
+        
+    end
 end
 
-function forward_pass()
+function forward_pass(sddp::SDDP, value_functions::CutsValueFunctions, k::Int64)
+
+    if k == 1
+        trajectory = 0
+    else
+        trajectory = 0
+    end
+
+    return trajectory
+
 end
 
 function backward_pass()
@@ -116,15 +130,16 @@ end
 
 function compute_value_functions(sddp::SddpModel; max_iterations::Int64=10)
 
-	x_0, value_functions = initialize_sddp()
-	
-	for k in 1:max_iterations
+    initialize_sddp(sddp)
+    value_functions = CutsValueFunctions(sddp.horizon)
+    
+    for k in 1:max_iterations
 
-		trajectory = forward_pass()
-		stopping_criterion = backward_pass!(trajectory, value_functions)
+        trajectory = forward_pass(sddp, value_functions, k)
+        stopping_criterion = backward_pass!(sddp, trajectory, value_functions)
 
-	end
+    end
 
-	return value_functions
+    return value_functions
 
 end

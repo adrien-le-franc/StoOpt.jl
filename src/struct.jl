@@ -20,9 +20,20 @@ Base.size(vf::ArrayValueFunctions) = size(vf.functions)
 ArrayValueFunctions(t::Tuple{Vararg{Int64}}) = ArrayValueFunctions(zeros(t))
 
 
-mutable struct CutsValueFunctions <: ValueFunctions
-	#functions::Array{JuMP.Model}
+mutable struct Cuts
+	n_cuts::Int64
+	alpha::Array{Array{Float64,1}}
+	beta::Array{Float64,1}
 end
+
+Cuts() = Cuts(0, Array{Float64,1}[], Float64[])
+
+
+mutable struct CutsValueFunctions <: ValueFunctions
+	functions::Array{Cuts}
+end
+
+CutsValueFunctions(horizon::Int64) = CutsValueFunctions([Cuts() for t in 1:horizon])
 
 
 

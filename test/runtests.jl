@@ -127,30 +127,35 @@ current_directory = @__DIR__
 
     @testset "SDDP" begin
 
-            state_bounds = StoOpt.Bounds([0.], [1.])
-            control_bounds = StoOpt.Bounds([0., 0.], [1., 1.])
-            horizon = 96
-            buy_price = price
-            sell_price = ones(horizon)*0.7
+        state_bounds = StoOpt.Bounds([0.], [1.])
+        control_bounds = StoOpt.Bounds([0., 0.], [1., 1.])
+        horizon = 96
+        buy_price = price
+        sell_price = ones(horizon)*0.7
 
-            function update_cost!(m::Model, t::Int64, noises::Noises)
-                set_normalized_coefficient(m[:cost_constraints][1], m[:control][1], buy_price[t])
-                set_normalized_coefficient(m[:cost_constraints][1], m[:control][2], -buy_price[t])
-                set_normalized_coefficient(m[:cost_constraints][1], m[:auxiliary_cost], -1)
-                set_normalized_rhs(m[:cost_constraints][1], -buy_price[t]*noises.w[t][1])
+        function update_cost!(constraint, t::Int64, x::Array{VariableRef,1}, 
+            u::Array{VariableRef,1}, w::Array{Float64,1})
 
-                set_normalized_coefficient(m[:cost_constraints][2], m[:control][1], sell_price[t])
-                set_normalized_coefficient(m[:cost_constraints][2], m[:control][2], -sell_price[t])
-                set_normalized_coefficient(m[:cost_constraints][2], m[:auxiliary_cost], -1)
-                set_normalized_rhs(m[:cost_constraints][2], -sell_price[t]*noises.w[t][1])
-            end 
+            set_normalized_coefficient(constraint[1], u[1], buy_price[t])
+            set_normalized_coefficient(constraint[1], u[2], -buy_price[t])
+            set_normalized_rhs(constraint[1], -buy_price[t]*w[1])
 
-            cost = StoOpt.PolyhedralCost(2, update_cost!)
+            set_normalized_coefficient(constraint[2], u[1], sell_price[t])
+            set_normalized_coefficient(constraint[2], u[2], -sell_price[t])
+            set_normalized_rhs(constraint[2], -sell_price[t]*w[1])
+            
+        end 
 
-            function dynamics() end
+        cost = StoOpt.PolyhedralCost(2, update_cost!)
 
-            sddp = StoOpt.SDDP(state_bounds, control_bounds, noises, cost, dynamics, horizon) 
-            @test typeof(sddp) <: StoOpt.SDDP
+        function dynamics() end
+
+        sddp = StoOpt.SDDP(state_bounds, control_bounds, noises, cost, dynamics, horizon) 
+
+        @test StoOpt.update_polyhedral_cost!(sddp, 1) == nothing
+
+        println(sddp.model)
+            
     end
     
 end
