@@ -133,16 +133,16 @@ current_directory = @__DIR__
         buy_price = price
         sell_price = ones(horizon)*0.7
 
-        function update_cost!(constraint, t::Int64, x::Array{VariableRef,1}, 
+        function update_cost!(constraints, t::Int64, x::Array{VariableRef,1}, 
             u::Array{VariableRef,1}, w::Array{Float64,1})
 
-            set_normalized_coefficient(constraint[1], u[1], buy_price[t])
-            set_normalized_coefficient(constraint[1], u[2], -buy_price[t])
-            set_normalized_rhs(constraint[1], -buy_price[t]*w[1])
+            set_normalized_coefficient(constraints[1], u[1], buy_price[t])
+            set_normalized_coefficient(constraints[1], u[2], -buy_price[t])
+            set_normalized_rhs(constraints[1], -buy_price[t]*w[1])
 
-            set_normalized_coefficient(constraint[2], u[1], sell_price[t])
-            set_normalized_coefficient(constraint[2], u[2], -sell_price[t])
-            set_normalized_rhs(constraint[2], -sell_price[t]*w[1])
+            set_normalized_coefficient(constraints[2], u[1], sell_price[t])
+            set_normalized_coefficient(constraints[2], u[2], -sell_price[t])
+            set_normalized_rhs(constraints[2], -sell_price[t]*w[1])
             
         end 
 
@@ -152,6 +152,7 @@ current_directory = @__DIR__
 
         sddp = StoOpt.SDDP(state_bounds, control_bounds, noises, cost, dynamics, horizon) 
 
+        @test StoOpt.initialize_sddp!(sddp) == nothing
         @test StoOpt.update_polyhedral_cost!(sddp, 1) == nothing
 
         println(sddp.model)

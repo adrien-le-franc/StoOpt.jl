@@ -95,22 +95,92 @@ end
 # SDDP 
 
 
-function initialize_sddp(sddp::SDDP)
+function initialize_model!(sddp::SDDP)
+    # generalize to other solvers
+    #model = Model(with_optimizer(CPLEX.Optimizer))
+    #MOI.set(model, MOI.RawParameter("CPX_PARAM_SCRIND"), 0)
+    sddp.model = Model(with_optimizer(Clp.Optimizer, LogLevel=0))
+    return nothing
+end
+
+function initialize_variables!(sddp::SDDP)
+
+    @variable(sddp.model, state[1:sddp.state_bounds.n_variables])
+    @constraint(sddp.model, 
+        sddp.state_bounds.lower_bounds .<= state .<= sddp.state_bounds.upper_bounds)
+
+    @variable(sddp.model, control[1:sddp.control_bounds.n_variables])
+    @constraint(sddp.model, 
+        sddp.control_bounds.lower_bounds .<= control .<= sddp.control_bounds.upper_bounds)
+
+    return nothing
+
+end
+
+function initialize_polyhedral_cost!(sddp::SDDP)
+
+    model = sddp.model
+
+    @variable(model, auxiliary_cost[1:sddp.noises.w.cardinal])
+    @constraint(model, cost_constraints[i=1:sddp.cost.n_cuts, j=1:sddp.noises.w.cardinal], 
+        0*sum(model[:state]) + 0*sum(model[:control]) - auxiliary_cost[j] <= 0.)
+
+    return nothing
+
+end
+
+function initialize_polyhedral_value_functions!(sddp::SDDP, max_cuts::Int64)
+
+    model = sddp.model
+
+    @variable(model, auxiliary_value_function[1:sddp.noises.w.cardinal])
+    @constraint(model, value_function_constraints[i=1:max_cuts, j=1:sddp.noises.w.cardinal],
+        0*sum(model[:state]) + 0*sum(model[:control]) - 0*auxiliary_value_function[j] <= 0.)
+
+    return nothing
+
+end
+
+function initialize_sddp!(sddp::SDDP; max_iterations::Int64=10)
+    
+    initialize_model!(sddp)
+    initialize_variables!(sddp)
+    initialize_polyhedral_cost!(sddp)
+    initialize_polyhedral_value_functions!(sddp, max_iterations)
+
+    return nothing
 
 end
 
 function update_polyhedral_cost!(sddp::SDDP, t::Int64)
+
     for j in 1:sddp.noises.w.cardinal
+
         sddp.cost.update_cost!(sddp.model[:cost_constraints][:, j], t, 
             sddp.model[:state], sddp.model[:control], sddp.noises.w[t][j, :])
+    
     end
+
     return nothing
+
 end
 
-function update_polyhedral_value_function!(sddp::SDDP)
+function update_value_function_cut!(sddp::SDDP, t::Int64, k::Int64)
+
+    
+
+end
+
+function update_polyhedral_value_functions!(sddp::SDDP, t::Int64, k::Int64)
+    
     for j in 1:sddp.noises.w.cardinal
-        
+       for i in 1:k
+
+            update_value_function_cut!(sddp, t, k)
+
+       end 
     end
+
 end
 
 function forward_pass(sddp::SDDP, value_functions::CutsValueFunctions, k::Int64)
@@ -130,7 +200,7 @@ end
 
 function compute_value_functions(sddp::SddpModel; max_iterations::Int64=10)
 
-    initialize_sddp(sddp)
+    initialize_sddp!(sddp)
     value_functions = CutsValueFunctions(sddp.horizon)
     
     for k in 1:max_iterations
