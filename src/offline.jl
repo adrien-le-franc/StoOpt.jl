@@ -165,21 +165,43 @@ function update_polyhedral_cost!(sddp::SDDP, t::Int64)
 
 end
 
-function update_value_function_cut!(sddp::SDDP, t::Int64, k::Int64)
-
+function update_value_function_cut!(sddp::SDDP, value_functions::CutsValueFunctions, 
+    t::Int64, i::Int64, j::Int64)
     
+    model = sddp.model
+    alpha = value_functions.functions[t+1].alpha[i]
+    beta = value_functions.functions[t+1].beta[i]
+
+    state_coefficients = sddp.dynamics.state_coefficient(t, sddp.noises.w[t][j, :])'*alpha
+    set_normalized_coefficient.(model[:value_function_constraints][i, j], model[:state], 
+        state_coefficients)
+
+    control_coefficients = sddp.dynamics.control_coefficient(t, sddp.noises.w[t][j, :])'*alpha
+    set_normalized_coefficient.(model[:value_function_constraints][i, j], model[:control], 
+        control_coefficients)
+
+    constant = (sddp.dynamics.constant(t, sddp.noises.w[t][j, :])'*alpha)[1] + beta
+    set_normalized_rhs(model[:value_function_constraints][i, j], -constant)
+
+    set_normalized_coefficient(model[:value_function_constraints][i, j], 
+        model[:auxiliary_value_function][j], -1.)
+
+    return nothing
 
 end
 
-function update_polyhedral_value_functions!(sddp::SDDP, t::Int64, k::Int64)
+function update_polyhedral_value_functions!(sddp::SDDP, value_functions::CutsValueFunctions, 
+    t::Int64, k::Int64)
     
     for j in 1:sddp.noises.w.cardinal
        for i in 1:k
 
-            update_value_function_cut!(sddp, t, k)
+            update_value_function_cut!(sddp, value_functions, t, i, j)
 
        end 
     end
+
+    return nothing
 
 end
 
@@ -201,7 +223,7 @@ end
 function compute_value_functions(sddp::SddpModel; max_iterations::Int64=10)
 
     initialize_sddp!(sddp)
-    value_functions = CutsValueFunctions(sddp.horizon)
+    value_functions = CutsValueFunctions(sddp.horizon+1)
     
     for k in 1:max_iterations
 

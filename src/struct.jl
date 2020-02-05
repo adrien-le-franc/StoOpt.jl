@@ -33,7 +33,7 @@ mutable struct CutsValueFunctions <: ValueFunctions
 	functions::Array{Cuts}
 end
 
-CutsValueFunctions(horizon::Int64) = CutsValueFunctions([Cuts() for t in 1:horizon])
+CutsValueFunctions(n::Int64) = CutsValueFunctions([Cuts() for t in 1:n])
 
 
 
@@ -64,7 +64,7 @@ function Grid(axis::Vararg{T}; enumerate=false) where T <: StepRangeLen{Float64}
 end
 
 
-# Type for continuous spaces
+# Types for continuous spaces
 
 
 struct Bounds
@@ -88,6 +88,13 @@ end
 struct PolyhedralCost
 	n_cuts::Int64
 	update_cost!::Function
+end
+
+
+struct LinearDynamics
+	state_coefficient::Function
+	control_coefficient::Function
+	constant::Function
 end
 
 

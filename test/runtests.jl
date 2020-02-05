@@ -148,7 +148,11 @@ current_directory = @__DIR__
 
         cost = StoOpt.PolyhedralCost(2, update_cost!)
 
-        function dynamics() end
+        state_coefficient(t::Int64, w::Array{Float64,1}) = ones(1, 1)
+        control_coefficient(t::Int64, w::Array{Float64,1}) = [r -1/r; ]
+        constant(t::Int64, w::Array{Float64,1}) = zeros(1, 1)
+
+        dynamics = StoOpt.LinearDynamics(state_coefficient, control_coefficient, constant)
 
         sddp = StoOpt.SDDP(state_bounds, control_bounds, noises, cost, dynamics, horizon) 
 
