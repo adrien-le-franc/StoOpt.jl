@@ -18,7 +18,18 @@ mutable struct SDP <: SdpModel
 	noises::Union{Noises, Nothing}
 	cost::Function
 	dynamics::Function
+	final_cost::Union{Function, Nothing}
 	horizon::Int64
 
 end
 
+function SDP(states::Grid, 
+	controls::Grid, 
+	noises::Union{Noises, Nothing}, 
+	cost::Function, 
+	dynamics::Function, 
+	horizon::Int64)
+	
+	return SDP(states, controls, noises, cost, dynamics, nothing, horizon)
+
+end

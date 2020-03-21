@@ -73,14 +73,33 @@ function fill_value_function!(sdp::SdpModel, variables::Variables,
 
 end
 
-function compute_value_functions(sdp::SdpModel)
+function initialize_value_functions(sdp::SdpModel)
 
 	value_functions = ArrayValueFunctions((sdp.horizon+1, size(sdp.states)...))
+
+	if !isnothing(sdp.final_cost)
+
+		final_values = zeros(size(sdp.states))
+		for (state, index) in sdp.states.iterator
+			state = collect(state)
+			final_values[index...] = sdp.final_cost(state)
+		end
+		value_functions[sdp.horizon+1] = final_values
+		
+	end
+
+	return value_functions
+
+end
+
+function compute_value_functions(sdp::SdpModel)
+
+	value_functions = initialize_value_functions(sdp)
 
 	for t in sdp.horizon:-1:1
 
 		variables = Variables(t, RandomVariable(sdp.noises, t))
-		interpolation = Interpolation(sdp.states, interpolate(value_functions[t+1], 
+		interpolation = Interpolation(sdp.states, interpolate(value_functions[t+1],
 			BSpline(Linear())))
 
 		fill_value_function!(sdp, variables, value_functions, interpolation)

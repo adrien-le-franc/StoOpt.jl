@@ -120,6 +120,11 @@ current_directory = @__DIR__
             @test compute_control(sdp, 1, [0.0], RandomVariable(noises, 1), 
                 value_functions) == [0.0]
 
+            sdp.final_cost = f(x::Array{Float64,1}) = 0.02*x[1]
+            t = @elapsed value_functions = compute_value_functions(sdp)
+
+            @test t < 8.
+            @test value_functions[horizon+1] == 0.02*collect(states.axis...)
     end
     
 end
