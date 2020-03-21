@@ -97,8 +97,7 @@ current_directory = @__DIR__
             
             sdp = StoOpt.SDP(states, controls, noises, cost, dynamics, horizon)
 
-            interpolation = StoOpt.Interpolation(interpolate(zeros(11), BSpline(Linear())),
-            states.steps)
+            interpolation = StoOpt.Interpolation(states, interpolate(zeros(11), BSpline(Linear())))
             variables = StoOpt.Variables(horizon, [0.0], [-0.1], RandomVariable(noises, horizon))
 
             @test StoOpt.compute_expected_realization(sdp, variables, interpolation) == Inf

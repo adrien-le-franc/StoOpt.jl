@@ -42,7 +42,7 @@ Base.size(g::Grid) = Tuple([length(g[i]) for i in 1:length(g.axis)])
 function Grid(axis::Vararg{T}; enumerate=false) where T <: StepRangeLen{Float64}
 	axis = collect(axis)
 	dimension = length(axis)
-	grid_steps = [axis[i][2] - axis[i][1] for i in 1:dimension]
+	grid_steps = [step(axis[i]) for i in 1:dimension]
 	if enumerate == true
 		grid_size = [length(axis[i]) for i in 1:length(axis)]
 		indices = Iterators.product([1:i for i in grid_size]...)
@@ -144,17 +144,31 @@ RandomVariable(n::Noises, t::Int64) = RandomVariable(n.w[t], n.pw[t])
 iterator(rv::RandomVariable) = zip(eachrow(rv.value), Iterators.Stateful(rv.probability))
 
 
-# Type for interpolation
+# Type for interpolation on Grid
 
+struct GridScale
+	grid_steps::Array{Float64,1}
+	grid_constants::Array{Float64,1}
+end
 
 struct Interpolation{T <: Interpolations.BSplineInterpolation{Float64}}
 	interpolator::T
-	grid_steps::Array{Float64,1}
+	scale::GridScale
+end
+
+function Interpolation(grid::Grid, 
+	interpolator::T) where T <: Interpolations.BSplineInterpolation{Float64}
+	
+	x_min = [grid.axis[i][1] for i in 1:length(grid.axis)]
+	grid_constants = 1. .- x_min ./ grid.steps
+	scale = GridScale(grid.steps, grid_constants)
+	return Interpolation(interpolator, scale) 
+
 end
 
 function eval_interpolation(x::Array{Float64,1}, i::Interpolation)
 
-	grid_position = x ./ i.grid_steps .+ 1.
+	grid_position = x ./ i.scale.grid_steps .+ i.scale.grid_constants
 	return i.interpolator(grid_position...)
 end
 

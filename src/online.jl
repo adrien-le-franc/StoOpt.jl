@@ -9,8 +9,8 @@ function compute_control(sdp::SdpModel, t::Int64, state::Array{Float64,1},
 	noise::RandomVariable, value_functions::ValueFunctions)
 	
 	variables = Variables(t, state, nothing, noise)
-	interpolation = Interpolation(interpolate(value_functions[t+1], BSpline(Linear())),
-			sdp.states.steps)
+	interpolation = Interpolation(sdp.states, interpolate(value_functions[t+1], 
+		BSpline(Linear())))
 
 	cost_to_go = Inf
 	optimal_control = Inf
