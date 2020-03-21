@@ -205,10 +205,14 @@ function update_polyhedral_value_functions!(sddp::SDDP, value_functions::CutsVal
 
 end
 
+function random_trajectory(state_bounds::Bounds, horizon::Int64)
+    
+end
+
 function forward_pass(sddp::SDDP, value_functions::CutsValueFunctions, k::Int64)
 
     if k == 1
-        trajectory = 0
+        trajectory = random_trajectory(sddp.state_bounds, sddp.horizon)
     else
         trajectory = 0
     end
