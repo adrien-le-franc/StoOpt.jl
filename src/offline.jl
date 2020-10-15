@@ -1,52 +1,42 @@
-# developed with Julia 1.1.1
+# developed with Julia 1.4.2
 #
 # offline step for Stochastic Dynamic Programming 
 
 
-# SDP 
-
 function compute_expected_realization(sdp::SdpModel, variables::Variables, 
-	interpolation::Interpolation)
+	interpolator::Interpolator)
 
-	realizations = Float64[] 
-	probabilities = Float64[]
-	reject_control = Float64[]
+	expected_realization = 0.
 
-	for (noise, probability) in iterator(variables.noise)
+	for (noise, probability) in iterator(variables.noise) # à changer
 
 		noise = collect(noise)
 		next_state = sdp.dynamics(variables.t, variables.state, variables.control, noise)
 
-		if !admissible_state!(next_state, sdp.states)
-			push!(reject_control, probability)
+		if !state_in_bounds(variables.t, next_state, sdp)
+			return Inf # à tester !!
 		end
 
-		next_value_function = eval_interpolation(next_state, interpolation)
-		realization = sdp.cost(variables.t, variables.state, variables.control, noise) + 
-			next_value_function
+		next_cost_to_go = interpolator.value(next_state...)
+		realization = sdp.cost(variables.t, variables.state, 
+			variables.control, noise) + next_cost_to_go
 
-		push!(realizations, realization)
-		push!(probabilities, probability)
+		expected_realization += realization*probability
 
 	end
 
-	if isapprox(sum(reject_control), 1.0)
-		return Inf
-	else
-		expected_cost_to_go = realizations'*probabilities
-		return expected_cost_to_go
-	end
+	return expected_realization
 
 end 
 
-function compute_cost_to_go(sdp::SdpModel, variables::Variables, interpolation::Interpolation)
+function compute_cost_to_go(sdp::SdpModel, variables::Variables, interpolator::Interpolator)
 
 	cost_to_go = Inf
 
-	for control in sdp.controls.iterator
+	for control in sdp.controls[variables.t]
 
 		variables.control = collect(control)
-		realization = compute_expected_realization(sdp, variables, interpolation)
+		realization = compute_expected_realization(sdp, variables, interpolator)
 		cost_to_go = min(cost_to_go, realization)
 
 	end
@@ -55,19 +45,18 @@ function compute_cost_to_go(sdp::SdpModel, variables::Variables, interpolation::
 
 end
 
-function fill_value_function!(sdp::SdpModel, variables::Variables, 
-	value_functions::ArrayValueFunctions, interpolation::Interpolation)
+function fill_value_function!(value_functions::ArrayValueFunctions, t::Int64, sdp::SdpModel, 
+	interpolator::Interpolator)
 
-	value_function = ones(size(sdp.states))
+	variables = Variables(t, RandomVariable(sdp.noises, t))
 
 	for (state, index) in sdp.states.iterator
 
 		variables.state = collect(state)
-		value_function[index...] = compute_cost_to_go(sdp, variables, interpolation)
+		index = (variables.t, index...)
+		value_functions[index...] = compute_cost_to_go(sdp, variables, interpolator)
 
 	end
-
-	value_functions[variables.t] = value_function
 
 	return nothing
 
@@ -75,7 +64,7 @@ end
 
 function initialize_value_functions(sdp::SdpModel)
 
-	value_functions = ArrayValueFunctions((sdp.horizon+1, size(sdp.states)...))
+	value_functions = ArrayValueFunctions(sdp.horizon+1, size(sdp.states)...)
 
 	if !isnothing(sdp.final_cost)
 
@@ -95,14 +84,12 @@ end
 function compute_value_functions(sdp::SdpModel)
 
 	value_functions = initialize_value_functions(sdp)
+	interpolator = Interpolator(sdp.horizon, sdp.states, value_functions)
 
 	for t in sdp.horizon:-1:1
 
-		variables = Variables(t, RandomVariable(sdp.noises, t))
-		interpolation = Interpolation(sdp.states, interpolate(value_functions[t+1],
-			BSpline(Linear())))
-
-		fill_value_function!(sdp, variables, value_functions, interpolation)
+		fill_value_function!(value_functions, t, sdp, interpolator)
+		update_interpolator!(interpolator, t, sdp.states, value_functions)
 
 	end
 

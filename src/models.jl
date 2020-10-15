@@ -13,8 +13,8 @@ abstract type RollingHorizonModel <: AbstractModel end
 
 mutable struct SDP <: SdpModel
 
-	states::Grid
-	controls::Grid
+	states::States
+	controls::Controls
 	noises::Union{Noises, Nothing}
 	cost::Union{Function, Nothing}
 	dynamics::Union{Function, Nothing}
@@ -23,8 +23,8 @@ mutable struct SDP <: SdpModel
 
 end
 
-function SDP(states::Grid, 
-	controls::Grid, 
+function SDP(states::States, 
+	controls::Controls, 
 	noises::Union{Noises, Nothing}, 
 	cost::Function, 
 	dynamics::Function, 

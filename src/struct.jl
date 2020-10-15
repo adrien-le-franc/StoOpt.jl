@@ -1,60 +1,112 @@
-# developed with Julia 1.1.1
+# developed with Julia 1.4.2
 #
 # generic struct for Stochastic Optimization problems 
 
 
-# Types for value functions
+# Type for bounds
 
+struct Bounds
+	upper::Array{Array{Float64,1},1}
+	lower::Array{Array{Float64,1},1}
 
-abstract type ValueFunctions end
-
-
-mutable struct ArrayValueFunctions <: ValueFunctions
-	functions::Array{Float64}
-end
-
-Base.getindex(vf::ArrayValueFunctions, t::Int64) = vf.functions[t, ..]
-Base.setindex!(vf::ArrayValueFunctions, x::Array{Float64}, t::Int64) = (vf.functions[t, ..] = x)
-Base.:(==)(vf1::ArrayValueFunctions, vf2::ArrayValueFunctions) = (vf1.functions == vf2.functions)
-Base.size(vf::ArrayValueFunctions) = size(vf.functions)
-ArrayValueFunctions(t::Tuple{Vararg{Int64}}) = ArrayValueFunctions(zeros(t))
-
-
-mutable struct CutsValueFunctions <: ValueFunctions
-	#functions::Array{JuMP.Model}
-end
-
-
-
-
-# Type for discretized spaces 
-
-
-struct Grid{T <: StepRangeLen{Float64}}
-	axis::Array{T}
-	iterator::Union{Iterators.ProductIterator, Iterators.Zip}
-	steps::Array{Float64}
-end
-
-Base.getindex(g::Grid, i::Int) = g.axis[i]
-Base.size(g::Grid) = Tuple([length(g[i]) for i in 1:length(g.axis)])
-
-function Grid(axis::Vararg{T}; enumerate=false) where T <: StepRangeLen{Float64}
-	axis = collect(axis)
-	dimension = length(axis)
-	grid_steps = [step(axis[i]) for i in 1:dimension]
-	if enumerate == true
-		grid_size = [length(axis[i]) for i in 1:length(axis)]
-		indices = Iterators.product([1:i for i in grid_size]...)
-		return Grid(axis, zip(Iterators.product(axis...), indices), grid_steps)
-	else
-		return Grid(axis, Iterators.product(axis...), grid_steps)
+	function Bounds(upper::Array{Array{Float64,1},1}, lower::Array{Array{Float64,1},1})
+		if length(upper) != length(lower)
+			error("Bounds: length of upper $(length(upper)) != lower $(length(lower))")
+		end
+		for t in 1:length(upper)
+			if !all(lower[t] .<= upper[t])
+				error("Bounds: empty domain at step $(t), 
+					where lower $(lower[t]) and upper $(upper[t])")
+			end
+		end
+		new(upper, lower)
 	end
 end
 
 
-# Types for handling noise processes 
+Base.size(bounds::Bounds) = length(bounds.upper)
+Base.getindex(bounds::Bounds, index::Int64) = bounds.upper[index], bounds.lower[index]
 
+function Bounds(horizon::Int64, upper::Array{Float64,1}, lower::Array{Float64,1})
+	return Bounds(fill(upper, horizon), fill(lower, horizon))
+end
+
+function Bounds(horizon::Int64, upper::Float64, lower::Float64)
+	return Bounds(fill([upper], horizon), fill([lower], horizon))
+end
+
+# Type for states
+
+struct States{Ta <: StepRangeLen{Float64}, Ti <: Iterators.Zip}
+	axis::Array{Ta}
+	iterator::Ti
+	bounds::Bounds
+end
+
+
+function States(horizon::Int64, axis::Vararg{T}) where T <: StepRangeLen{Float64}
+
+	axis = collect(axis)
+	upper = Float64[]
+	lower = Float64[]
+	indices = []
+
+	for i in 1:length(axis)
+		x = axis[i]
+		x_min, x_max = extrema(x)
+		push!(upper, x_max)
+		push!(lower, x_min)
+		push!(indices, 1:length(x))
+	end
+
+	indices = Iterators.product(indices...)
+	iterator = zip(Iterators.product(axis...), indices)
+	bounds = Bounds(horizon+1, upper, lower)
+
+	return States(axis, iterator, bounds)
+
+end
+
+Base.size(states::States) = size(states.iterator)
+
+# Type for controls
+
+struct Controls{T <: Iterators.ProductIterator}
+	iterators::Array{T,1}
+end
+
+
+Base.size(controls::Controls) = length(controls.iterators)
+Base.getindex(controls::Controls, index::Int64) = controls.iterators[index]
+
+function Controls(horizon::Int64, axis::Vararg{T}) where T <: StepRangeLen{Float64}
+	return Controls(fill(Iterators.product(axis...), horizon))
+end
+
+function Controls(bounds::Bounds, axis::Vararg{T}) where T <: StepRangeLen{Float64} 
+
+	dimension = length(axis)
+	iterators = Iterators.ProductIterator[]
+
+	for t in 1:length(bounds.upper)
+
+		upper, lower = bounds[t]
+		axis_iterators = []
+
+		for i in 1:dimension
+			in_bounds(control::Float64) = lower[i] <= control <= upper[i]
+			push!(axis_iterators, Iterators.filter(in_bounds, axis[i]))
+		end
+
+		push!(iterators, Iterators.product(axis_iterators...))
+
+	end
+
+	return Controls(iterators)
+
+end
+
+# Types for handling noise processes 
 
 struct TimeProcess
 	data::Array{Float64,3}
@@ -143,38 +195,7 @@ end
 RandomVariable(n::Noises, t::Int64) = RandomVariable(n.w[t], n.pw[t])
 iterator(rv::RandomVariable) = zip(eachrow(rv.value), Iterators.Stateful(rv.probability))
 
-
-# Type for interpolation on Grid
-
-struct GridScale
-	grid_steps::Array{Float64,1}
-	grid_constants::Array{Float64,1}
-end
-
-struct Interpolation{T <: Interpolations.BSplineInterpolation{Float64}}
-	interpolator::T
-	scale::GridScale
-end
-
-function Interpolation(grid::Grid, 
-	interpolator::T) where T <: Interpolations.BSplineInterpolation{Float64}
-	
-	x_min = [grid.axis[i][1] for i in 1:length(grid.axis)]
-	grid_constants = 1. .- x_min ./ grid.steps
-	scale = GridScale(grid.steps, grid_constants)
-	return Interpolation(interpolator, scale) 
-
-end
-
-function eval_interpolation(x::Array{Float64,1}, i::Interpolation)
-
-	grid_position = x ./ i.scale.grid_steps .+ i.scale.grid_constants
-	return i.interpolator(grid_position...)
-end
-
-
 # Type containing all variables for Stochastic Optimal Control
-
 
 mutable struct Variables
 	t::Int64
@@ -184,3 +205,57 @@ mutable struct Variables
 end
 
 Variables(t::Int64, rv::RandomVariable) = Variables(t, nothing, nothing, rv)
+
+# Types for value functions
+
+abstract type ValueFunctions end
+
+mutable struct ArrayValueFunctions <: ValueFunctions
+	functions::Array{Float64}
+end
+
+ArrayValueFunctions(sz::Vararg{Int64}) = ArrayValueFunctions(zeros(sz))
+
+Base.:(==)(vf1::ArrayValueFunctions, vf2::ArrayValueFunctions) = (vf1.functions == vf2.functions)
+Base.size(vf::ArrayValueFunctions) = size(vf.functions)
+Base.getindex(vf::ArrayValueFunctions, t::Int64) = vf.functions[t, ..]
+Base.setindex!(vf::ArrayValueFunctions, x::Array{Float64}, t::Int64) = (vf.functions[t, ..] = x)
+Base.getindex(vf::ArrayValueFunctions, index::Vararg{Int64}) = vf.functions[index...]
+function Base.setindex!(vf::ArrayValueFunctions, x::Float64, 
+	index::Vararg{Int64}) vf.functions[index...] = x end
+
+
+mutable struct SharedArrayValueFunctions <: ValueFunctions
+	functions::SharedArray{Float64}
+end
+
+function SharedArrayValueFunctions(sz::Vararg{Int64})
+	return SharedArrayValueFunctions(SharedArray{Float64, length(sz)}(sz)) end
+
+function Base.:(==)(svf1::SharedArrayValueFunctions, svf2::SharedArrayValueFunctions) 
+	return svf1.functions == svf2.functions end
+Base.size(svf::SharedArrayValueFunctions) = size(svf.functions)
+Base.getindex(svf::SharedArrayValueFunctions, t::Int64) = svf.functions[t, ..]
+function Base.setindex!(svf::SharedArrayValueFunctions, x::Array{Float64}, t::Int64) 
+	(svf.functions[t, ..] = x) end
+Base.getindex(svf::SharedArrayValueFunctions, index::Vararg{Int64}) = svf.functions[index...]
+function Base.setindex!(svf::SharedArrayValueFunctions, x::Float64, index::Vararg{Int64}) 
+	(svf.functions[index...] = x) end
+
+function ArrayValueFunctions(svf::SharedArrayValueFunctions)
+	return ArrayValueFunctions(sdata(svf.functions)) end
+
+# Types for interpolating ValueFunctions on States
+
+mutable struct Interpolator{N, Tv <: AbstractArray{Float64,N}}
+	value::Tv
+end
+
+function Interpolator(t::Int64, states::States, value_functions::ValueFunctions)
+	return Interpolator(LinearInterpolation(tuple(states.axis...), value_functions[t+1]))
+end
+
+function update_interpolator!(interpolator::Interpolator, t::Int64, 
+	states::States, value_functions::ValueFunctions)
+	interpolator.value = LinearInterpolation(tuple(states.axis...), value_functions[t+1])
+end
