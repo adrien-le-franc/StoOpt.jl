@@ -84,7 +84,7 @@ end
 function compute_value_functions(sdp::SdpModel)
 
 	value_functions = initialize_value_functions(sdp)
-	interpolator = Interpolator(sdp.horizon, sdp.states, value_functions)
+	interpolator = Interpolator(sdp.horizon+1, sdp.states, value_functions)
 
 	for t in sdp.horizon:-1:1
 

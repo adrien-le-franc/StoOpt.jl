@@ -252,10 +252,10 @@ mutable struct Interpolator{N, Tv <: AbstractArray{Float64,N}}
 end
 
 function Interpolator(t::Int64, states::States, value_functions::ValueFunctions)
-	return Interpolator(LinearInterpolation(tuple(states.axis...), value_functions[t+1]))
+	return Interpolator(LinearInterpolation(tuple(states.axis...), value_functions[t]))
 end
 
 function update_interpolator!(interpolator::Interpolator, t::Int64, 
 	states::States, value_functions::ValueFunctions)
-	interpolator.value = LinearInterpolation(tuple(states.axis...), value_functions[t+1])
+	interpolator.value = LinearInterpolation(tuple(states.axis...), value_functions[t])
 end
