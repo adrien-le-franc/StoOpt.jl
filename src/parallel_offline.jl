@@ -61,6 +61,10 @@ function parallel_compute_value_functions(sdp::SdpModel)
 
 	end
 
-	return ArrayValueFunctions(value_functions)
+	result = ArrayValueFunctions(value_functions)
+	@everywhere value_functions = nothing
+	@everywhere GC.gc()
+
+	return result
 
 end
