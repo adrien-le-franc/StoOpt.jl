@@ -166,7 +166,7 @@ current_directory = @__DIR__
             
             @everywhere using StoOpt
 
-            value_functions = SO.SharedArrayValueFunctions(horizon+1, 11)
+            value_functions = SO.ArrayValueFunctions(horizon+1, 11)
             interpolator = SO.Interpolator(horizon, states, value_functions)
             variables = SO.Variables(horizon, [0.0], [-0.1], SO.RandomVariable(noises, horizon))
 
@@ -175,8 +175,10 @@ current_directory = @__DIR__
             @test isapprox(SO.compute_cost_to_go(sdp, variables, interpolator),
                 0.048178640538937376)
 
-            value_functions = SO.SharedArrayValueFunctions(sdp.horizon, size(sdp.states)...)
-            SO.parallel_fill_value_function!(value_functions, variables.t, sdp, interpolator)
+            value_functions = SO.ArrayValueFunctions(sdp.horizon, size(sdp.states)...)
+            pool = CachingPool(workers())
+            SO.parallel_fill_value_function!(value_functions, variables.t, sdp, 
+                interpolator, pool)
 
             @test isapprox(value_functions[horizon][11], 0.0012163218646055842,)
 

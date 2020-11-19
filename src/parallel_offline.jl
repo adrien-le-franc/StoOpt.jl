@@ -16,33 +16,42 @@ function set_processors(n::Integer = Sys.CPU_THREADS; kw...)
     return workers()
 end
 
-function parallel_fill_value_function!(value_functions::SharedArrayValueFunctions, t::Int64, 
+function bellman_operator(t::Int64, x::Tuple{Vararg{Float64}}, noises::RandomVariable,
 	sdp::SdpModel, interpolator::Interpolator)
 
-	variables = Variables(t, RandomVariable(sdp.noises, t))
+	variables = Variables(t, collect(x), nothing, noises)
+	value = compute_cost_to_go(sdp, variables, interpolator)
 
-	@sync @distributed for (state, index) in collect(sdp.states.iterator)
+	return value
+end
 
-		variables.state = collect(state)
-		index = (variables.t, index...)
-		value_functions[index...] = compute_cost_to_go(sdp, variables, interpolator)
+function parallel_fill_value_function!(value_functions::ArrayValueFunctions, t::Int64, 
+	sdp::SdpModel, interpolator::Interpolator, pool::CachingPool)
 
-	end
+	noises = RandomVariable(sdp.noises, t)
+
+	value_functions[t] = pmap(x->bellman_operator(t, x, noises, sdp, interpolator),
+		pool, Iterators.product(sdp.states.axis...))
 
 	return nothing
 
 end
 
-function initialize_shared_value_functions(sdp::SdpModel)
+function initialize_value_functions(x::Tuple{Vararg{Float64}},
+	sdp::SdpModel)
 
-	value_functions = SharedArrayValueFunctions(sdp.horizon+1, size(sdp.states)...)
+	state = collect(x)
+	return sdp.final_cost(state)
+	
+end
+
+function parallel_initialize_value_functions(sdp::SdpModel, pool::CachingPool)
+
+	value_functions = ArrayValueFunctions(sdp.horizon+1, size(sdp.states)...)
 
 	if !isnothing(sdp.final_cost)
-		@sync @distributed for (state, index) in collect(sdp.states.iterator)
-			state = collect(state)
-			index = (sdp.horizon+1, index...)
-			value_functions[index...] = sdp.final_cost(state)
-		end	
+		value_functions[sdp.horizon+1] = pmap(x->initialize_value_functions(x, sdp),
+			pool, Iterators.product(sdp.states.axis...))	
 	end
 
 	return value_functions
@@ -51,20 +60,20 @@ end
 
 function parallel_compute_value_functions(sdp::SdpModel)
 
-	value_functions = initialize_shared_value_functions(sdp)
-	interpolator = Interpolator(sdp.horizon, sdp.states, value_functions)
+	pool = CachingPool(workers())
+	value_functions = parallel_initialize_value_functions(sdp, pool)
+	interpolator = Interpolator(sdp.horizon+1, sdp.states, value_functions)
 
 	for t in sdp.horizon:-1:1
 
-		parallel_fill_value_function!(value_functions, t, sdp, interpolator)
+		parallel_fill_value_function!(value_functions, t, sdp, interpolator, pool)
 		update_interpolator!(interpolator, t, sdp.states, value_functions)
 
 	end
 
-	result = ArrayValueFunctions(value_functions)
-	@everywhere value_functions = nothing
-	@everywhere GC.gc()
+	clear!(pool) # ??
 
-	return result
+	return value_functions
 
 end
+
