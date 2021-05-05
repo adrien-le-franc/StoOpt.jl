@@ -8,7 +8,7 @@ function compute_expected_realization(sdp::SdpModel, variables::Variables,
 
 	expected_realization = 0.
 
-	for (noise, probability) in iterator(variables.noise) # à changer
+	for (noise, probability) in law(variables.noise)
 
 		noise = collect(noise)
 		next_state = sdp.dynamics(variables.t, variables.state, variables.control, noise)
